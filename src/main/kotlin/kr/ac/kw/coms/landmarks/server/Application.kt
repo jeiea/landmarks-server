@@ -8,6 +8,7 @@ import io.ktor.html.respondHtml
 import io.ktor.http.ContentType
 import io.ktor.response.respondText
 import io.ktor.routing.get
+import io.ktor.routing.post
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -15,15 +16,17 @@ import kotlinx.html.body
 import kotlinx.html.p
 
 fun main(args: Array<String>) {
-  val server = embeddedServer(Netty, 8080, module = Application::landmarksServer)
+  val server = embeddedServer(
+    Netty, 8080, module = Application::landmarksServer,
+    watchPaths = listOf("landmarks-serverkt"))
   server.start(wait = true)
 }
 
 fun Application.landmarksServer() {
-  install(DefaultHeaders)
   install(CallLogging)
-  install(ConditionalHeaders)
   install(Compression)
+  install(ConditionalHeaders)
+  install(DefaultHeaders)
   install(StatusPages) {
 
   }
@@ -39,6 +42,8 @@ fun Application.landmarksServer() {
           }
         }
       }
+    }
+    post("/auth/register") {
     }
   }
 }
