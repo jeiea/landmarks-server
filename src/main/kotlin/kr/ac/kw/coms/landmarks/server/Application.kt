@@ -20,8 +20,9 @@ import kotlinx.html.body
 import kotlinx.html.p
 
 fun main(args: Array<String>) {
+  val port = System.getenv("PORT").toIntOrNull() ?: 8080
   val server = embeddedServer(
-    Netty, 8080, module = Application::landmarksServer,
+    Netty, port, module = Application::landmarksServer,
     watchPaths = listOf("landmarks-serverkt"))
   server.start(wait = true)
 }
