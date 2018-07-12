@@ -2,18 +2,18 @@ package kr.ac.kw.coms.landmarks.server
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SchemaUtils.create
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.insertIgnore
+import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.sql.Connection
 
 object User : Table() {
-  val id = integer("id").primaryKey().autoIncrement()
+  val id = integer("id").autoIncrement().primaryKey()
   val login = varchar("login", 20).uniqueIndex()
-  val pass = binary("passhash", 256)
+  val passhash = binary("passhash", 256).nullable()
   val email = varchar("email", 50).uniqueIndex()
-  val nick = varchar("name", 20).uniqueIndex()
+  val nick = varchar("nick", 20).uniqueIndex()
   val nation = varchar("nation", 20)
   val verification = varchar("verKey", 20).nullable()
 }
@@ -57,22 +57,26 @@ object CollectionShare : Table() {
 
 
 fun dbInitialize() {
-  val dataSource: HikariDataSource
-
-  val cfg = HikariConfig()
   val sqliteUrl = "jdbc:sqlite:landmarks.sqlite3"
-  cfg.jdbcUrl = System.getenv("DATABASE_URL") ?: sqliteUrl
-  dataSource = HikariDataSource(cfg)
+  val jdbcUrl = System.getenv("DATABASE_URL") ?: sqliteUrl
+  val cfg = HikariConfig().also { it.jdbcUrl = jdbcUrl}
+  val dataSource = HikariDataSource(cfg)
   Database.connect(dataSource)
+
+  // If don't do this, exception occurs with SQLite
+  if (jdbcUrl == sqliteUrl)
+    TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
 
   transaction {
     create(User)
-    User.insertIgnore {
-      it[login] = "t"
-      it[pass] = byteArrayOf()
-      it[email] = ""
-      it[nick] = "admin"
-      it[nation] = "KR"
+    if (User.select { User.nick eq "admin" }.count() < 1) {
+      User.insert {
+        it[login] = "t"
+        it[passhash] = byteArrayOf()
+        it[email] = ""
+        it[nick] = "admin"
+        it[nation] = "KR"
+      }
     }
   }
 }

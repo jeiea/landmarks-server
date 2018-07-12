@@ -1,1 +1,1 @@
-web: java -jar build/libs/landmarks-serverkt-0.1.jar
+web: java -jar build/libs/landmarks-serverkt-all.jar

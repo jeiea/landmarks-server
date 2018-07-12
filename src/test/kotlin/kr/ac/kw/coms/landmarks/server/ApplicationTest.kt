@@ -1,12 +1,18 @@
 package kr.ac.kw.coms.landmarks.server
 
 import io.ktor.application.Application
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
+import io.ktor.request.contentType
+import io.ktor.request.receive
 import io.ktor.server.testing.handleRequest
+import io.ktor.server.testing.setBody
 import io.ktor.server.testing.withTestApplication
-import org.amshove.kluent.`should be false`
-import org.amshove.kluent.`should be`
+import org.amshove.kluent.*
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.spek.api.Spek
 import org.jetbrains.spek.api.dsl.describe
 import org.jetbrains.spek.api.dsl.it
@@ -22,9 +28,30 @@ class LandmarksSpek : Spek({
           response.status() `should be` HttpStatusCode.OK
         }
       }
-      with(handleRequest(HttpMethod.Get, "/index.html")) {
-        it("doesn't have /index.html") {
-          requestHandled.`should be false`()
+      val email = "12341234@grr.la"
+      with(handleRequest(HttpMethod.Post, "auth/register") {
+        addHeader(HttpHeaders.ContentType, "application/json")
+        addHeader(HttpHeaders.UserAgent, "landmarks-client")
+        setBody("""{"login":"tlogin","password":"pass","email": "${email}","nick":"tnick"}""")
+      }){
+        it("can handling registration") {
+//          response.status() `should be` HttpStatusCode.OK
+          response.content!! `should contain` "success"
+        }
+      }
+      var verifyCode: String?
+      it("should store registration info") {
+        verifyCode = transaction { User.select { User.email eq email }.first()[User.verification]}
+        verifyCode `should not be`  null
+      }
+      with(handleRequest(HttpMethod.Post, "auth/login") {
+        addHeader(HttpHeaders.ContentType, "application/json")
+        addHeader(HttpHeaders.UserAgent, "landmarks-client")
+        setBody("""{"login":"tlogin", "password":"pass"}""")
+      }){
+        it("can login") {
+//          response.status() `should be` HttpStatusCode.OK
+          response.content!! `should contain` "success"
         }
       }
     }
