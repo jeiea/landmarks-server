@@ -9,6 +9,7 @@ import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.sessions.sessions
 import io.ktor.sessions.set
+import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
@@ -26,7 +27,6 @@ data class Register(
   val email: String?
 )
 
-data class LoginJson(val login: String?, val pass: String?)
 data class ErrorJson(val error: String)
 data class SuccessJson(val msg: String)
 
@@ -43,7 +43,7 @@ fun getSHA256(str: String): ByteArray {
     .digest(("piezo" + str).toByteArray())!!
 }
 
-fun Route.register() {
+fun Route.authentication() {
 
   post("/auth/register") {
     val reg: Register = call.receive()
@@ -66,15 +66,26 @@ fun Route.register() {
 
     val digest = getSHA256(reg.password!!)
 
-    transaction {
-      User.insert {
-        it[User.email] = reg.email!!
-        it[User.login] = reg.login!!
-        it[User.nick] = reg.nick!!
-        it[User.passhash] = digest
-        it[User.verification] = getRandomString(10)
-        it[User.nation] = "KR"
+    try {
+      transaction {
+        User.insert {
+          it[User.email] = reg.email!!
+          it[User.login] = reg.login!!
+          it[User.nick] = reg.nick!!
+          it[User.passhash] = digest
+          it[User.verification] = getRandomString(10)
+          it[User.nation] = "KR"
+        }
       }
+    }
+    catch (e: ExposedSQLException) {
+      if (e.message?.contains("constraint failed") ?: false) {
+        call.respond(ErrorJson("Already existing user"))
+      }
+      else {
+        throw e
+      }
+      return@post
     }
 
     call.respond(SuccessJson("success"))
@@ -108,13 +119,13 @@ fun Route.register() {
   }
 
   post("/auth/login") {
-    val param: LoginJson = call.receive()
+    val param: Register = call.receive()
     if (param.login == null) {
       call.respond(ErrorJson("login field missing"))
       return@post
     }
-    if (param.pass == null) {
-      call.respond(ErrorJson("pass field missing"))
+    if (param.password == null) {
+      call.respond(ErrorJson("passworld field missing"))
       return@post
     }
     val user = transaction {
@@ -122,7 +133,7 @@ fun Route.register() {
         .adjustSlice { slice(User.id, User.passhash) }
         .firstOrNull()
     }
-    val hash = getSHA256(param.pass)
+    val hash = getSHA256(param.password)
     if (user == null || !user[User.passhash]!!.contentEquals(hash)) {
       call.respond(ErrorJson("password incorrect"))
       return@post

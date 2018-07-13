@@ -11,6 +11,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.locations.Locations
 import io.ktor.response.respond
 import io.ktor.response.respondText
+import io.ktor.routing.Routing
 import io.ktor.routing.get
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
@@ -20,7 +21,7 @@ import kotlinx.html.body
 import kotlinx.html.p
 
 fun main(args: Array<String>) {
-  val port = System.getenv("PORT").toIntOrNull() ?: 8080
+  val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
   val server = embeddedServer(
     Netty, port, module = Application::landmarksServer,
     watchPaths = listOf("landmarks-serverkt"))
@@ -63,7 +64,12 @@ fun Application.landmarksServer() {
       }
     }
 
-    register()
+    authentication()
+    upload()
   }
+}
+
+fun Routing.upload() {
+
 }
 

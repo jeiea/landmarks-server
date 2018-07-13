@@ -29,7 +29,7 @@ class LandmarksSpek : Spek({
         }
       }
       val email = "12341234@grr.la"
-      with(handleRequest(HttpMethod.Post, "auth/register") {
+      with(handleRequest(HttpMethod.Post, "auth/authentication") {
         addHeader(HttpHeaders.ContentType, "application/json")
         addHeader(HttpHeaders.UserAgent, "landmarks-client")
         setBody("""{"login":"tlogin","password":"pass","email": "${email}","nick":"tnick"}""")
