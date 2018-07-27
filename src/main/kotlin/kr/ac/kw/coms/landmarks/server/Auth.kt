@@ -1,12 +1,16 @@
 package kr.ac.kw.coms.landmarks.server
 
+import io.ktor.application.ApplicationCallPipeline.ApplicationPhase.Call
 import io.ktor.application.call
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.request.header
 import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.routing.Route
 import io.ktor.routing.get
 import io.ktor.routing.post
+import io.ktor.routing.route
 import io.ktor.sessions.sessions
 import io.ktor.sessions.set
 import org.jetbrains.exposed.exceptions.ExposedSQLException
@@ -43,9 +47,15 @@ fun getSHA256(str: String): ByteArray {
     .digest(("piezo" + str).toByteArray())!!
 }
 
-fun Route.authentication() {
+fun Route.authentication() = route("/auth") {
 
-  post("/auth/register") {
+  intercept(Call) {
+    if (call.request.header(HttpHeaders.UserAgent) != "landmarks-client") {
+      throw ValidException("landmarks-client agent required")
+    }
+  }
+
+  post("/register") {
     val reg: Register = call.receive()
     val isMissing: suspend (String, String?) -> Boolean = { name, field ->
       if (field == null) {
@@ -68,13 +78,13 @@ fun Route.authentication() {
 
     try {
       transaction {
-        User.insert {
-          it[User.email] = reg.email!!
-          it[User.login] = reg.login!!
-          it[User.nick] = reg.nick!!
-          it[User.passhash] = digest
-          it[User.verification] = getRandomString(10)
-          it[User.nation] = "KR"
+        User.new {
+          email = reg.email!!
+          login = reg.login!!
+          nick = reg.nick!!
+          passhash = digest
+          verification = getRandomString(10)
+          nation = "KR"
         }
       }
     }
@@ -91,7 +101,7 @@ fun Route.authentication() {
     call.respond(SuccessJson("success"))
   }
 
-  get("/auth/verification/{verKey}") {
+  get("/verification/{verKey}") {
     val verKey = call.parameters["verKey"] ?: ""
     if (verKey == "") {
       call.respond(
@@ -101,7 +111,7 @@ fun Route.authentication() {
     }
 
     val verified = transaction {
-      val target = User.select { User.verification eq verKey }.firstOrNull()
+      val target = Users.select { Users.verification eq verKey }.firstOrNull()
       if (target == null) suspend {
         call.respond(
           HttpStatusCode.NotFound,
@@ -109,7 +119,7 @@ fun Route.authentication() {
         false
       }
       else suspend {
-        User.deleteWhere { User.verification eq verKey }
+        Users.deleteWhere { Users.verification eq verKey }
         true
       }
     }
@@ -118,27 +128,27 @@ fun Route.authentication() {
     call.respond(SuccessJson("verification success"))
   }
 
-  post("/auth/login") {
+  post("/login") {
     val param: Register = call.receive()
     if (param.login == null) {
       call.respond(ErrorJson("login field missing"))
       return@post
     }
     if (param.password == null) {
-      call.respond(ErrorJson("passworld field missing"))
+      call.respond(ErrorJson("password field missing"))
       return@post
     }
     val user = transaction {
-      User.select { User.login eq param.login }
-        .adjustSlice { slice(User.id, User.passhash) }
+      Users.select { Users.login eq param.login }
+        .adjustSlice { slice(Users.id, Users.passhash) }
         .firstOrNull()
     }
     val hash = getSHA256(param.password)
-    if (user == null || !user[User.passhash]!!.contentEquals(hash)) {
+    if (user == null || !user[Users.passhash]!!.contentEquals(hash)) {
       call.respond(ErrorJson("password incorrect"))
       return@post
     }
-    call.sessions.set(LMSession(user[User.id]))
+    call.sessions.set(LMSession(user[Users.id].value))
     call.respond(SuccessJson("login success"))
   }
 }
