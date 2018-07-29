@@ -3,10 +3,7 @@ package kr.ac.kw.coms.landmarks.server
 import com.beust.klaxon.JsonArray
 import com.beust.klaxon.JsonObject
 import com.beust.klaxon.json
-import io.ktor.application.Application
-import io.ktor.application.ApplicationCall
-import io.ktor.application.call
-import io.ktor.application.install
+import io.ktor.application.*
 import io.ktor.content.MultiPartData
 import io.ktor.content.PartData
 import io.ktor.content.forEachPart
@@ -85,6 +82,11 @@ fun Application.landmarksServer() {
   println("DB initialized. server running...")
 
   routing {
+
+    trace {
+      log.debug(it.buildText())
+    }
+
     get("/") {
       call.respondText("Hello, world!", ContentType.Text.Html)
     }

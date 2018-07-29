@@ -15,7 +15,6 @@ import io.ktor.sessions.sessions
 import io.ktor.sessions.set
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.security.MessageDigest
@@ -87,12 +86,10 @@ fun Route.authentication() = route("/auth") {
           nation = "KR"
         }
       }
-    }
-    catch (e: ExposedSQLException) {
+    } catch (e: ExposedSQLException) {
       if (e.message?.contains("constraint failed") ?: false) {
         call.respond(ErrorJson("Already existing user"))
-      }
-      else {
+      } else {
         throw e
       }
       return@post
