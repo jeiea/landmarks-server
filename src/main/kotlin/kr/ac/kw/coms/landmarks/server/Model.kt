@@ -22,7 +22,7 @@ object Users : IntIdTable() {
 }
 
 object Pictures : IntIdTable() {
-  val filename = varchar("filename", 10)
+  val filename = varchar("filename", 128)
   val file = blob("file")
   val thumbnail = blob("thumbnail")
   val owner = entityId("owner", Users).references(Users.id)
@@ -94,6 +94,7 @@ fun dbInitialize() {
 
   transaction {
     create(Users)
+    create(Pictures)
 
     if (User.find { Users.nick eq "admin" }.count() < 1) {
       User.new {

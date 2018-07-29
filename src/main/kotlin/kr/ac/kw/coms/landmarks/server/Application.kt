@@ -37,10 +37,11 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
-import java.sql.Blob
+import javax.sql.rowset.serial.SerialBlob
 
 fun main(args: Array<String>) {
   val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -205,6 +206,7 @@ fun Routing.picture() = route("/picture") {
         runBlocking {
           parts.forEachPart(makePicture(it, sess.userId))
         }
+        it[Pictures.owner] = EntityID(sess.userId, Users)
       }
     }
 
@@ -249,36 +251,39 @@ fun Routing.picture() = route("/picture") {
   }
 }
 
-private fun Transaction.makePicture(it: InsertStatement<Number>, userId: Int):
-  suspend (PartData) -> Unit = { part ->
+private fun Transaction.makePicture(stmt: InsertStatement<Number>, userId: Int):
+  suspend (PartData) -> Unit = fld@{ part ->
 
   when (part) {
     is PartData.FormItem -> {
       when (part.name) {
-        "latlon" -> {
-          val fs = part.value.split(",").map { it.toFloat() }
-          it[Pictures.longi] = fs[0]
-          it[Pictures.latit] = fs[1]
+        "lat" -> {
+          stmt[Pictures.latit] = part.value.toFloatOrNull() ?: return@fld
+        }
+        "lon" -> {
+          stmt[Pictures.longi] = part.value.toFloatOrNull() ?: return@fld
         }
         "address" -> {
-          it[Pictures.address] = part.value
+          stmt[Pictures.address] = part.value
         }
       }
     }
     is PartData.FileItem -> {
       val name = File(part.originalFileName)
-      it[Pictures.filename] =
+      stmt[Pictures.filename] =
         "${System.currentTimeMillis()}-" +
         "${userId.hashCode()}-" +
         "${part.originalFileName!!.hashCode()}.${name.extension}"
-      val thumBlob: Blob = connection.createBlob()!!
-      Thumbnails.of(part.streamProvider())
-        .size(200, 200)
-        .toOutputStream(thumBlob.setBinaryStream(0))
-      it[Pictures.thumbnail] = thumBlob
-      val fileBlob: Blob = connection.createBlob()!!
-      part.streamProvider().copyToSuspend(fileBlob.setBinaryStream(0))
-      it[Pictures.file] = fileBlob
+      ByteArrayOutputStream().use {
+        Thumbnails.of(part.streamProvider())
+          .size(200, 200)
+          .toOutputStream(it)
+        stmt[Pictures.thumbnail] = SerialBlob(it.toByteArray())
+      }
+      ByteArrayOutputStream().use {
+        part.streamProvider().copyToSuspend(it)
+        stmt[Pictures.file] = SerialBlob(it.toByteArray())
+      }
     }
   }
 }

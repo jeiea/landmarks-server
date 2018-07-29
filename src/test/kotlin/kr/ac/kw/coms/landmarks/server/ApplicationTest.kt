@@ -1,21 +1,26 @@
 package kr.ac.kw.coms.landmarks.server
 
-import awaitStringResponse
-import awaitStringResult
-import com.beust.klaxon.JsonObject
+import com.beust.klaxon.JsonBase
 import com.beust.klaxon.json
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.DataPart
-import com.github.kittinunf.fuel.core.FuelManager
-import com.github.kittinunf.fuel.core.Method
-import com.github.kittinunf.fuel.core.Request
 import io.ktor.application.Application
-import io.ktor.http.ContentType
+import io.ktor.client.HttpClient
+import io.ktor.client.call.HttpClientCall
+import io.ktor.client.call.call
+import io.ktor.client.engine.apache.Apache
+import io.ktor.client.engine.config
+import io.ktor.client.features.cookies.AcceptAllCookiesStorage
+import io.ktor.client.features.cookies.HttpCookies
+import io.ktor.client.request.*
+import io.ktor.http.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.util.url
+import kotlinx.coroutines.experimental.io.jvm.javaio.toOutputStream
 import kotlinx.coroutines.experimental.runBlocking
-import org.amshove.kluent.`should be equal to`
+import kr.ac.kw.coms.landmarks.utils.MultiPartContent
+import org.amshove.kluent.`should be`
 import org.amshove.kluent.`should contain`
+import org.apache.http.HttpHost
 import org.jetbrains.spek.api.Spek
 import org.jetbrains.spek.api.dsl.TestBody
 import org.jetbrains.spek.api.dsl.TestContainer
@@ -24,6 +29,7 @@ import org.jetbrains.spek.api.dsl.it
 import org.junit.platform.runner.JUnitPlatform
 import org.junit.runner.RunWith
 import java.io.File
+import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.ProxySelector
 import java.net.URI
@@ -43,39 +49,42 @@ class LandmarksSpek : Spek({
 
   describe("landmarks server") {
     val basePath = "http://localhost:8080"
-    val http = FuelManager()
-
-    fun get(path: String, param: List<Pair<String, Any?>>? = null): Request {
-      return http.request(Method.GET, path, param)
-    }
-
-    fun post(path: String, param: List<Pair<String, Any?>>? = null): Request {
-      return http.request(Method.POST, path, param)
-    }
-
-    fun post(path: String, json: JsonObject): Request {
-      return http
-        .request(Method.POST, path)
-        .header("Content-Type" to "application/json")
-        .body(json.toJsonString())
+    val proxy: InetSocketAddress? = getSystemProxy()
+    val http = HttpClient(Apache.config {
+      url {
+        host = "localhost"
+        port = 8080
+      }
+      proxy?.also {
+        customizeClient {
+          setProxy(HttpHost(it.hostName, it.port))
+        }
+      }
+      socketTimeout = 0
+      connectTimeout = 0
+      connectionRequestTimeout = 0
+    }) {
+      install(HttpCookies) {
+        storage = AcceptAllCookiesStorage()
+      }
     }
 
     beforeGroup {
       server.start()
-      // TBD it is useless. it only affects to debug mode. I don't know why.
-      System.setProperty("java.net.useSystemProxies", "true");
-      ProxySelector.getDefault().select(URI("http://localhost")).also {
-        for (proxy: Proxy in it) {
-          http.basePath = basePath
-          http.proxy = proxy
-          println("proxy: $proxy")
-        }
-      }
+    }
+
+    fun HttpRequestBuilder.userAgent() {
+      header("User-Agent", "landmarks-client")
+    }
+
+    fun HttpRequestBuilder.json(json: JsonBase) {
+      contentType(ContentType.Application.Json)
+      body = json.toJsonString()
     }
 
     blit("should pass health test") {
-      val result = get("/").awaitStringResult().get()
-      result `should contain` "Hello"
+      val resp = http.get<String>(basePath)
+      resp `should contain` "Hello"
     }
 
     val ident = getRandomString(10)
@@ -88,40 +97,48 @@ class LandmarksSpek : Spek({
         "nick" to ident
       )
     }
-    val registrationReq by lazy {
-      post("/auth/register", regFields)
+    val registrationReq = fun HttpRequestBuilder.() {
+      method = HttpMethod.Post
+      url.takeFrom("$basePath/auth/register")
+      json(regFields)
     }
 
     blit("should reject invalid user-agent") {
-      val (_, resp, _) =
-        registrationReq.awaitStringResponse()
-      resp.statusCode `should be equal to` 400
+      val call: HttpClientCall = http.call(block = registrationReq)
+      call.response.status `should be` HttpStatusCode.BadRequest
     }
 
     blit("can register") {
-      val result = registrationReq
-        .header("User-Agent" to "landmarks-client")
-        .awaitStringResult()
-      result.get() `should contain` "success"
+      val resp: String = http.post {
+        userAgent()
+        registrationReq()
+      }
+      resp `should contain` "success"
     }
 
     blit("can login") {
-      val json = json { obj("login" to ident, "password" to "pass") }
-      val result = post("/auth/login", json)
-        .header("User-Agent" to "landmarks-client")
-        .awaitStringResult()
-      result.get() `should contain` "success"
+      val param = json { obj("login" to ident, "password" to "pass") }
+      val result: String = http.post("$basePath/auth/login") {
+        userAgent()
+        json(param)
+      }
+      result `should contain` "success"
     }
 
     blit("can receive picture") {
-      val result = http
-        .request(Method.PUT, "/picture", listOf("latlon" to "3,3"))
-        .header("Content-Type" to "multipart/form-data; boundary=a93ah3FoeKDl09")
-        .apply { type = Request.Type.UPLOAD }
-        .dataParts { request, url ->
-          listOf(DataPart(File("coord0.jpg")))
-        }.awaitStringResult()
-      result.get() `should contain` "success"
+      val str: String = http.request {
+        method = HttpMethod.Put
+        url.takeFrom("$basePath/picture")
+        body = MultiPartContent.build {
+          add("lat", "3.3")
+          add("lon", "3.0")
+          add("address", "somewhere on earth")
+          add("pic1", filename = "coord0.jpg") {
+            File("coord0.jpg").inputStream().copyToSuspend(toOutputStream())
+          }
+        }
+      }
+      str `should contain` "success"
     }
 
     afterGroup {
@@ -129,3 +146,16 @@ class LandmarksSpek : Spek({
     }
   }
 })
+
+private fun getSystemProxy(): InetSocketAddress? {
+  val vmoUseProxy = "java.net.useSystemProxies"
+  System.setProperty(vmoUseProxy, "true");
+  val proxies = ProxySelector
+    .getDefault().select(URI("http://localhost"))
+  for (proxy: Proxy in proxies) {
+    println("proxy: $proxy")
+    return proxy.address() as InetSocketAddress
+  }
+  System.setProperty(vmoUseProxy, null);
+  return null
+}
