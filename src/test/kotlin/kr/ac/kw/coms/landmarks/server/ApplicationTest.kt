@@ -1,104 +1,131 @@
 package kr.ac.kw.coms.landmarks.server
 
+import awaitStringResponse
+import awaitStringResult
+import com.beust.klaxon.JsonObject
+import com.beust.klaxon.json
+import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.DataPart
+import com.github.kittinunf.fuel.core.FuelManager
+import com.github.kittinunf.fuel.core.Method
+import com.github.kittinunf.fuel.core.Request
 import io.ktor.application.Application
-import io.ktor.content.PartData
-import io.ktor.http.*
+import io.ktor.http.ContentType
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
-import io.ktor.server.testing.*
-import org.amshove.kluent.*
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.experimental.runBlocking
+import org.amshove.kluent.`should be equal to`
+import org.amshove.kluent.`should contain`
 import org.jetbrains.spek.api.Spek
+import org.jetbrains.spek.api.dsl.TestBody
+import org.jetbrains.spek.api.dsl.TestContainer
 import org.jetbrains.spek.api.dsl.describe
 import org.jetbrains.spek.api.dsl.it
 import org.junit.platform.runner.JUnitPlatform
 import org.junit.runner.RunWith
 import java.io.File
-import java.io.FileInputStream
+import java.net.Proxy
+import java.net.ProxySelector
+import java.net.URI
+import java.util.concurrent.TimeUnit
+
+fun TestContainer.blit(description: String, body: suspend TestBody.() -> Unit) {
+  it(description) {
+    runBlocking { body() }
+  }
+}
 
 @RunWith(JUnitPlatform::class)
 class LandmarksSpek : Spek({
-  fun TestApplicationRequest.jsonClient() {
-    addHeader(HttpHeaders.ContentType, "application/json")
-    addHeader(HttpHeaders.UserAgent, "landmarks-client")
-  }
-  fun TestApplicationCall.shouldSuccess() {
-    response.status() `should be` HttpStatusCode.OK
-    response.content!! `should contain` "success"
-  }
+
+  val server =
+    embeddedServer(Netty, 8080, module = Application::landmarksServer)
+
   describe("landmarks server") {
-    withTestApplication(Application::landmarksServer) {
-      with(handleRequest(HttpMethod.Get, "/")) {
-        it("should pass health test") {
-          response.status() `should be` HttpStatusCode.OK
-        }
-      }
+    val basePath = "http://localhost:8080"
+    val http = FuelManager()
 
-      val ident = getRandomString(10)
-      val email = "$ident@grr.la"
+    fun get(path: String, param: List<Pair<String, Any?>>? = null): Request {
+      return http.request(Method.GET, path, param)
+    }
 
-      with(handleRequest(HttpMethod.Post, "auth/authentication") {
-        setBody("""{"login":"$ident","password":"pass","email": "${email}","nick":"$ident"}""")
-      }) {
-        it("should reject invalid user-agent") {
-          response.status() `should not be` HttpStatusCode.OK
-          response.content?.`should not contain`("success")
-        }
-      }
+    fun post(path: String, param: List<Pair<String, Any?>>? = null): Request {
+      return http.request(Method.POST, path, param)
+    }
 
-      with(handleRequest(HttpMethod.Post, "auth/authentication") {
-        jsonClient()
-        setBody("""{"login":"$ident","password":"pass","email": "${email}","nick":"$ident"}""")
-      }) {
-        it("can handling registration") {
-          shouldSuccess()
-        }
-      }
+    fun post(path: String, json: JsonObject): Request {
+      return http
+        .request(Method.POST, path)
+        .header("Content-Type" to "application/json")
+        .body(json.toJsonString())
+    }
 
-      var verifyCode: String?
-      it("should store registration info") {
-        verifyCode = transaction {
-          Users.select { Users.email eq email }.first()[Users.verification]
-        }
-        verifyCode `should not be` null
-      }
-      with(handleRequest(HttpMethod.Post, "auth/login") {
-        jsonClient()
-        setBody("""{"login":"$ident", "password":"pass"}""")
-      }) {
-        it("can login") {
-          shouldSuccess()
-        }
-      }
-
-      val boundary: String = "-".repeat(30) + getRandomString(10)
-      val gps0 = File("coord0.jpg").inputStream()
-      with(handleRequest(HttpMethod.Put, "picture") {
-        setBody(boundary, listOf(
-          PartData.FormItem("latlon", {}, Headers.build {
-            this[HttpHeaders.ContentDisposition] = """inline; name="latlon""""
-          }),
-          partFromFile(File("coord0.jpg"), "totoroo")
-        ))
-      }) {
-        it("can receive picture") {
-          shouldSuccess()
+    beforeGroup {
+      server.start()
+      // TBD it is useless. it only affects to debug mode. I don't know why.
+      System.setProperty("java.net.useSystemProxies", "true");
+      ProxySelector.getDefault().select(URI("http://localhost")).also {
+        for (proxy: Proxy in it) {
+          http.basePath = basePath
+          http.proxy = proxy
+          println("proxy: $proxy")
         }
       }
     }
+
+    blit("should pass health test") {
+      val result = get("/").awaitStringResult().get()
+      result `should contain` "Hello"
+    }
+
+    val ident = getRandomString(10)
+    val email = "$ident@grr.la"
+    val regFields = json {
+      obj(
+        "login" to ident,
+        "password" to "pass",
+        "email" to email,
+        "nick" to ident
+      )
+    }
+    val registrationReq by lazy {
+      post("/auth/register", regFields)
+    }
+
+    blit("should reject invalid user-agent") {
+      val (_, resp, _) =
+        registrationReq.awaitStringResponse()
+      resp.statusCode `should be equal to` 400
+    }
+
+    blit("can register") {
+      val result = registrationReq
+        .header("User-Agent" to "landmarks-client")
+        .awaitStringResult()
+      result.get() `should contain` "success"
+    }
+
+    blit("can login") {
+      val json = json { obj("login" to ident, "password" to "pass") }
+      val result = post("/auth/login", json)
+        .header("User-Agent" to "landmarks-client")
+        .awaitStringResult()
+      result.get() `should contain` "success"
+    }
+
+    blit("can receive picture") {
+      val result = http
+        .request(Method.PUT, "/picture", listOf("latlon" to "3,3"))
+        .header("Content-Type" to "multipart/form-data; boundary=a93ah3FoeKDl09")
+        .apply { type = Request.Type.UPLOAD }
+        .dataParts { request, url ->
+          listOf(DataPart(File("coord0.jpg")))
+        }.awaitStringResult()
+      result.get() `should contain` "success"
+    }
+
+    afterGroup {
+      server.stop(2, 2, TimeUnit.SECONDS)
+    }
   }
 })
-
-fun partFromFile(file: File, name: String? = null)
-  : PartData.FileItem {
-  val fis: FileInputStream = file.inputStream()
-  return PartData.FileItem({fis}, {fis.close()}, Headers.build{
-    val filename: String = ContentDisposition.Parameters.FileName
-    val params: ArrayList<HeaderValueParam> = arrayListOf(HeaderValueParam(filename, file.name))
-    name?.also { params.add(HeaderValueParam("name", it)) }
-    val cd: ContentDisposition = ContentDisposition.File.withParameter(filename, file.name)
-    this[HttpHeaders.ContentDisposition] = cd.disposition
-    this[HttpHeaders.ContentType] = ContentType.defaultForFileExtension(".jpg").toString()
-  })
-}
