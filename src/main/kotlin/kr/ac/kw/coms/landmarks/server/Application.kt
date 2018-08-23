@@ -3,45 +3,30 @@ package kr.ac.kw.coms.landmarks.server
 import com.beust.klaxon.JsonArray
 import com.beust.klaxon.JsonObject
 import com.beust.klaxon.json
-import io.ktor.application.*
-import io.ktor.content.MultiPartData
-import io.ktor.content.PartData
-import io.ktor.content.forEachPart
+import io.ktor.application.Application
+import io.ktor.application.call
+import io.ktor.application.install
+import io.ktor.application.log
 import io.ktor.features.*
 import io.ktor.gson.gson
 import io.ktor.html.respondHtml
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.locations.Locations
-import io.ktor.network.util.ioCoroutineDispatcher
-import io.ktor.pipeline.PipelineContext
 import io.ktor.request.receive
 import io.ktor.request.receiveMultipart
 import io.ktor.response.respond
-import io.ktor.response.respondBytes
 import io.ktor.response.respondText
 import io.ktor.routing.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.*
-import kotlinx.coroutines.experimental.CoroutineDispatcher
-import kotlinx.coroutines.experimental.runBlocking
-import kotlinx.coroutines.experimental.withContext
-import kotlinx.coroutines.experimental.yield
 import kotlinx.html.body
 import kotlinx.html.p
-import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.statements.InsertStatement
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
-import javax.sql.rowset.serial.SerialBlob
+import java.util.*
 
 fun main(args: Array<String>) {
   val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -51,7 +36,6 @@ fun main(args: Array<String>) {
   server.start(wait = true)
 }
 
-data class LMSession(val userId: Int)
 
 data class ValidException(
   val msg: String,
@@ -103,6 +87,34 @@ fun Application.landmarksServer() {
     authentication()
     picture()
     collection()
+    problem()
+  }
+}
+
+fun Route.problem() = route("/problem") {
+  put("/") {
+    val sess: LMSession = requireLogin()
+    val argId = call.request.queryParameters["picId"]
+    val picId = if (argId == null) {
+      val multipart = call.receiveMultipart()
+      transaction {
+        insertPicture(multipart, sess).generatedKey
+      }
+        ?: throw ValidException("invalid picId")
+    } else {
+      argId.toIntOrNull() ?: throw ValidException("picId should be int")
+    }
+
+  }
+  get("/random") {
+//    val s = Pictures.selectAll().orderBy(Random()).limit(4).toList()
+//    s[0][Pictures.address]
+    val cnt: Int = Picture.count()
+    val pic: Picture = Picture[Random().nextInt(cnt)]
+    val js = json {
+      obj(
+      )
+    }
   }
 }
 
@@ -147,7 +159,7 @@ fun Routing.collection() = route("/collection") {
     call.respond(SuccessJson("update success"))
   }
 
-  get("/user/{id?}") {
+  get("/user/{id?}") { _ ->
     val paramId = call.parameters["id"]?.toInt()
     val sessId = call.sessions.get<LMSession>()?.userId
     val id = paramId ?: sessId ?: throw ValidException("id not specified")
@@ -166,125 +178,6 @@ fun Routing.collection() = route("/collection") {
       }
     }
     call.respond(ar)
-  }
-}
-
-private fun PipelineContext<Unit, ApplicationCall>.requireLogin() =
-  call.sessions.get<LMSession>()
-    ?: throw ValidException("login required", HttpStatusCode.Unauthorized)
-
-suspend fun InputStream.copyToSuspend(
-  out: OutputStream,
-  bufferSize: Int = DEFAULT_BUFFER_SIZE,
-  yieldSize: Int = 4 * 1024 * 1024,
-  dispatcher: CoroutineDispatcher = ioCoroutineDispatcher
-): Long {
-  return withContext(dispatcher) {
-    val buffer = ByteArray(bufferSize)
-    var bytesCopied = 0L
-    var bytesAfterYield = 0L
-    while (true) {
-      val bytes = read(buffer).takeIf { it >= 0 } ?: break
-      out.write(buffer, 0, bytes)
-      if (bytesAfterYield >= yieldSize) {
-        yield()
-        bytesAfterYield %= yieldSize
-      }
-      bytesCopied += bytes
-      bytesAfterYield += bytes
-    }
-    return@withContext bytesCopied
-  }
-}
-
-fun Routing.picture() = route("/picture") {
-  put("/") {
-    val parts: MultiPartData = call.receiveMultipart()
-    val sess = requireLogin()
-    transaction {
-      Pictures.insert {
-        runBlocking {
-          parts.forEachPart(makePicture(it, sess.userId))
-        }
-        it[Pictures.owner] = EntityID(sess.userId, Users)
-      }
-    }
-
-    call.respond(SuccessJson("Upload success"))
-  }
-
-  get("/user/{id}") {
-    val ar = JsonArray<JsonObject>()
-    transaction {
-      ar.addAll(Picture.all().map {
-        json {
-          obj(
-            "id" to it.id,
-            "filename" to it.filename,
-            "owner" to it.owner,
-            "address" to it.address,
-            "latit" to it.latit,
-            "longi" to it.longi
-          )
-        }
-      })
-    }
-    call.respond(ar.toJsonString())
-  }
-
-  get("/{id}") {
-    val id = call.parameters["id"]?.toIntOrNull() ?: throw ValidException("id not valid")
-    val bytes = transaction {
-      val pic = Picture.findById(id) ?: throw ValidException("Not found", HttpStatusCode.NotFound)
-      pic.file.binaryStream.readBytes()
-    }
-    call.respondBytes(bytes)
-  }
-
-  get("/thumbnail/{id}") {
-    val id = call.parameters["id"]?.toIntOrNull() ?: throw ValidException("id not valid")
-    val bytes = transaction {
-      val pic = Picture.findById(id) ?: throw ValidException("Not found", HttpStatusCode.NotFound)
-      pic.thumbnail.binaryStream.readBytes()
-    }
-    call.respondBytes(bytes)
-  }
-}
-
-private fun Transaction.makePicture(stmt: InsertStatement<Number>, userId: Int):
-  suspend (PartData) -> Unit = fld@{ part ->
-
-  when (part) {
-    is PartData.FormItem -> {
-      when (part.name) {
-        "lat" -> {
-          stmt[Pictures.latit] = part.value.toFloatOrNull() ?: return@fld
-        }
-        "lon" -> {
-          stmt[Pictures.longi] = part.value.toFloatOrNull() ?: return@fld
-        }
-        "address" -> {
-          stmt[Pictures.address] = part.value
-        }
-      }
-    }
-    is PartData.FileItem -> {
-      val name = File(part.originalFileName)
-      stmt[Pictures.filename] =
-        "${System.currentTimeMillis()}-" +
-        "${userId.hashCode()}-" +
-        "${part.originalFileName!!.hashCode()}.${name.extension}"
-      ByteArrayOutputStream().use {
-        Thumbnails.of(part.streamProvider())
-          .size(200, 200)
-          .toOutputStream(it)
-        stmt[Pictures.thumbnail] = SerialBlob(it.toByteArray())
-      }
-      ByteArrayOutputStream().use {
-        part.streamProvider().copyToSuspend(it)
-        stmt[Pictures.file] = SerialBlob(it.toByteArray())
-      }
-    }
   }
 }
 

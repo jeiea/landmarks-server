@@ -1,9 +1,11 @@
 package kr.ac.kw.coms.landmarks.server
 
+import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationCallPipeline.ApplicationPhase.Call
 import io.ktor.application.call
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.pipeline.PipelineContext
 import io.ktor.request.header
 import io.ktor.request.receive
 import io.ktor.response.respond
@@ -11,6 +13,7 @@ import io.ktor.routing.Route
 import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
+import io.ktor.sessions.get
 import io.ktor.sessions.sessions
 import io.ktor.sessions.set
 import org.jetbrains.exposed.exceptions.ExposedSQLException
@@ -29,6 +32,8 @@ data class Register(
   val password: String?,
   val email: String?
 )
+
+data class LMSession(val userId: Int)
 
 data class ErrorJson(val error: String)
 data class SuccessJson(val msg: String)
@@ -149,3 +154,7 @@ fun Route.authentication() = route("/auth") {
     call.respond(SuccessJson("login success"))
   }
 }
+
+internal fun PipelineContext<Unit, ApplicationCall>.requireLogin() =
+  call.sessions.get<LMSession>()
+    ?: throw ValidException("login required", HttpStatusCode.Unauthorized)

@@ -1,7 +1,7 @@
-package kr.ac.kw.coms.landmarks.utils
+package kr.ac.kw.coms.landmarks.client
 
-import io.ktor.content.OutgoingContent
 import io.ktor.http.*
+import io.ktor.http.content.OutgoingContent
 import io.ktor.util.flattenEntries
 import kotlinx.coroutines.experimental.io.ByteWriteChannel
 import kotlinx.coroutines.experimental.io.writeStringUtf8
@@ -52,7 +52,7 @@ class MultiPartContent(val parts: List<Part>) : OutgoingContent.WriteChannelCont
     }
 
     fun add(name: String, data: ByteArray, contentType: ContentType? = ContentType.Application.OctetStream, filename: String? = null) {
-      add(name, filename, contentType) { writeFully(data) }
+      add(name, filename, contentType) { writeFully(data, 0, data.size) }
     }
 
     internal fun build(): MultiPartContent = MultiPartContent(parts.toList())

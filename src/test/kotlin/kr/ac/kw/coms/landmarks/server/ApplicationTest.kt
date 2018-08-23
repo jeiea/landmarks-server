@@ -17,7 +17,7 @@ import io.ktor.server.netty.Netty
 import io.ktor.util.url
 import kotlinx.coroutines.experimental.io.jvm.javaio.toOutputStream
 import kotlinx.coroutines.experimental.runBlocking
-import kr.ac.kw.coms.landmarks.utils.MultiPartContent
+import kr.ac.kw.coms.landmarks.client.MultiPartContent
 import org.amshove.kluent.`should be`
 import org.amshove.kluent.`should contain`
 import org.apache.http.HttpHost
@@ -134,7 +134,7 @@ class LandmarksSpek : Spek({
           add("lon", "3.0")
           add("address", "somewhere on earth")
           add("pic1", filename = "coord0.jpg") {
-            File("coord0.jpg").inputStream().copyToSuspend(toOutputStream())
+            File("coord0.jpg").inputStream().copyTo(toOutputStream())
           }
         }
       }
