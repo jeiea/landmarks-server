@@ -2,9 +2,15 @@ package kr.ac.kw.coms.landmarks.client
 
 import io.ktor.http.*
 import io.ktor.http.content.OutgoingContent
+import io.ktor.network.util.ioCoroutineDispatcher
 import io.ktor.util.flattenEntries
+import kotlinx.coroutines.experimental.CoroutineDispatcher
 import kotlinx.coroutines.experimental.io.ByteWriteChannel
 import kotlinx.coroutines.experimental.io.writeStringUtf8
+import kotlinx.coroutines.experimental.withContext
+import kotlinx.coroutines.experimental.yield
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.*
 
 class MultiPartContent(val parts: List<Part>) : OutgoingContent.WriteChannelContent() {
@@ -69,5 +75,29 @@ operator fun Headers.plus(other: Headers): Headers = when {
   else -> Headers.build {
     appendAll(this@plus)
     appendAll(other)
+  }
+}
+
+suspend fun InputStream.copyToSuspend(
+  out: OutputStream,
+  bufferSize: Int = DEFAULT_BUFFER_SIZE,
+  yieldSize: Int = 4 * 1024 * 1024,
+  dispatcher: CoroutineDispatcher = ioCoroutineDispatcher
+): Long {
+  return withContext(dispatcher) {
+    val buffer = ByteArray(bufferSize)
+    var bytesCopied = 0L
+    var bytesAfterYield = 0L
+    while (true) {
+      val bytes = read(buffer).takeIf { it >= 0 } ?: break
+      out.write(buffer, 0, bytes)
+      if (bytesAfterYield >= yieldSize) {
+        yield()
+        bytesAfterYield %= yieldSize
+      }
+      bytesCopied += bytes
+      bytesAfterYield += bytes
+    }
+    return@withContext bytesCopied
   }
 }

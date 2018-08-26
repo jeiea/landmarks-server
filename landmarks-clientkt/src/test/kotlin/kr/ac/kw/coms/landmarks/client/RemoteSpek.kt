@@ -29,11 +29,11 @@ class RemoteSpek : Spek({
   describe("landmarks client") {
     val client = Remote(getTestClient(), "http://localhost:8080")
 
-    blit("does reverse geocoding") {
-      val s = client.reverseGeocode(37.54567, 126.9944)
-      s!!.first!! `should be equal to` "대한민국"
-      s.second!! `should be equal to` "서울특별시"
-    }
+//    blit("does reverse geocoding") {
+//      val s = client.reverseGeocode(37.54567, 126.9944)
+//      s!!.first!! `should be equal to` "대한민국"
+//      s.second!! `should be equal to` "서울특별시"
+//    }
 
     blit("checks server health") {
       client.checkAlive()
@@ -50,6 +50,11 @@ class RemoteSpek : Spek({
 
     blit("uploads picture") {
       client.uploadPic(File("../honeyview_gps.jpg"), 3.3f, 1f, "somewhere")
+    }
+
+    blit("receives quiz") {
+      val pic = client.getRandomProblem()
+      assert(pic.file!!.size != 0)
     }
   }
 })

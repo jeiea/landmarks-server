@@ -15,7 +15,9 @@ import io.ktor.http.*
 import kotlinx.coroutines.experimental.channels.Channel
 import kotlinx.coroutines.experimental.channels.sendBlocking
 import kotlinx.coroutines.experimental.delay
+import kotlinx.coroutines.experimental.io.ByteChannel
 import kotlinx.coroutines.experimental.io.jvm.javaio.toOutputStream
+import kotlinx.coroutines.experimental.io.readUTF8Line
 import java.io.File
 import java.util.*
 import kotlin.math.max
@@ -112,28 +114,29 @@ class Remote(base: HttpClient, val basePath: String) {
   }
 
   suspend fun uploadPic(file: File, latitude: Float? = null, longitude: Float? = null, addr: String? = null) {
-    val resp: String = http.request {
-      method = HttpMethod.Put
-      url.takeFrom("$basePath/picture")
-      body = MultiPartContent.build {
+    val content = MultiPartContent.build {
         latitude?.also { add("lat", it.toString()) }
         longitude?.also { add("lon", it.toString()) }
         addr?.also { add("address", it) }
         add("pic0", filename = file.name) {
-          file.inputStream().copyTo(toOutputStream())
+          file.inputStream().copyToSuspend(toOutputStream())
         }
       }
+    val resp: String = http.request {
+      method = HttpMethod.Put
+      url.takeFrom("$basePath/picture")
+      body = content
     }
     throwIfFailure(resp)
   }
 
   data class PictureRep(
     val id: Int,
-    val owner: Int,
+    val owner: Int? = null,
     val address: String,
     val lat: Float,
     val lon: Float,
-    var file: ByteArray?
+    var file: ByteArray? = null
   )
 
   suspend fun getRandomProblem(): PictureRep {

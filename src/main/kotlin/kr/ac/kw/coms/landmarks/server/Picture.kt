@@ -2,7 +2,10 @@ package kr.ac.kw.coms.landmarks.server
 
 import com.beust.klaxon.JsonArray
 import com.beust.klaxon.JsonObject
+import com.beust.klaxon.KlaxonJson
 import com.beust.klaxon.json
+import com.drew.imaging.ImageMetadataReader
+import com.drew.metadata.exif.GpsDirectory
 import io.ktor.application.call
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.MultiPartData
@@ -17,11 +20,11 @@ import io.ktor.routing.get
 import io.ktor.routing.put
 import io.ktor.routing.route
 import kotlinx.coroutines.experimental.runBlocking
+import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.statements.InsertStatement
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.sql.rowset.serial.SerialBlob
@@ -37,20 +40,18 @@ fun Routing.picture() = route("/picture") {
     call.respond(SuccessJson("Upload success"))
   }
 
-  get("/user/{id}") {
+  get("/user/{id}") { _ ->
     val ar = JsonArray<JsonObject>()
     transaction {
       ar.addAll(Picture.all().map {
-        json {
-          obj(
-            "id" to it.id,
-            "filename" to it.filename,
-            "owner" to it.owner,
-            "address" to it.address,
-            "latit" to it.latit,
-            "longi" to it.longi
-          )
-        }
+        KlaxonJson().obj(
+          "id" to it.id,
+          "filename" to it.filename,
+          "owner" to it.owner,
+          "address" to it.address,
+          "latit" to it.latit,
+          "longi" to it.longi
+        )
       })
     }
     call.respond(ar.toJsonString())
@@ -77,50 +78,73 @@ fun Routing.picture() = route("/picture") {
   }
 }
 
-fun insertPicture(parts: MultiPartData, sess: LMSession): InsertStatement<Number> {
-  return Pictures.insert { stmt ->
+fun insertPicture(parts: MultiPartData, sess: LMSession): Picture {
+  return Picture.new {
+    owner = EntityID(sess.userId, Users)
     runBlocking {
-      parts.forEachPart(assemblePicture(stmt, sess.userId))
+      parts.forEachPart(assemblePicture(this@new, sess.userId))
     }
-    stmt[owner] = EntityID(sess.userId, Users)
   }
 }
 
-private fun assemblePicture(stmt: InsertStatement<Number>, userId: Int):
+private fun assemblePicture(record: Picture, userId: Int):
   suspend (PartData) -> Unit = fld@{ part ->
 
-  when (part) {
-    is PartData.FormItem -> {
-      when (part.name) {
-        "lat" -> {
-          stmt[Pictures.latit] = part.value.toFloatOrNull() ?: return@fld
-        }
-        "lon" -> {
-          stmt[Pictures.longi] = part.value.toFloatOrNull() ?: return@fld
-        }
-        "address" -> {
-          stmt[Pictures.address] = part.value
-        }
-      }
-    }
-    is PartData.FileItem -> {
-      val name = File(part.originalFileName)
-      stmt[Pictures.filename] =
-        "${System.currentTimeMillis()}-" +
-        "${userId.hashCode()}-" +
-        "${part.originalFileName!!.hashCode()}.${name.extension}"
-      ByteArrayOutputStream().use {
-        Thumbnails.of(part.streamProvider())
-          .size(200, 200)
-          .toOutputStream(it)
-        stmt[Pictures.thumbnail] = SerialBlob(it.toByteArray())
-      }
-      ByteArrayOutputStream().use {
-        part.streamProvider().copyTo(it)
-        stmt[Pictures.file] = SerialBlob(it.toByteArray())
-      }
-    }
+  sl@ when (part) {
+    is PartData.FormItem -> fillFormField(record, part)
+    is PartData.FileItem -> receivePictureFile(record, part, userId)
   }
 
   part.dispose()
+}
+
+fun fillFormField(record: Picture, part: PartData.FormItem) {
+  when (part.name) {
+    "lat" -> {
+      if (record.latit != null) return
+      record.latit = part.value.toFloatOrNull() ?: return
+    }
+    "lon" -> {
+      if (record.longi != null) return
+      record.longi = part.value.toFloatOrNull() ?: return
+    }
+    "address" -> {
+      record.address = part.value
+    }
+  }
+}
+
+suspend fun receivePictureFile(record: Picture, part: PartData.FileItem, userId: Int) {
+  record.filename = timeUidOriginalNameHash(part.originalFileName!!, userId)
+
+  ByteArrayOutputStream().use { buffer ->
+    part.streamProvider().use { it.copyToSuspend(buffer) }
+    val ar = buffer.toByteArray()
+    record.file = SerialBlob(ar)
+    buffer.reset()
+
+    Thumbnails.of(ByteArrayInputStream(ar))
+      .size(200, 200)
+      .toOutputStream(buffer)
+    record.thumbnail = SerialBlob(buffer.toByteArray())
+    buffer.reset()
+
+    ImageMetadataReader
+      .readMetadata(ByteArrayInputStream(ar))
+      .getFirstDirectoryOfType(GpsDirectory::class.java)
+      ?.geoLocation
+      ?.also {
+        record.latit = it.latitude.toFloat()
+        record.longi = it.longitude.toFloat()
+      }
+  }
+}
+
+fun timeUidOriginalNameHash(path: String, userId: Int): String {
+  val name = File(path)
+  val time = System.currentTimeMillis()
+  val uid = userId.hashCode()
+  val hash = path.hashCode()
+  val ext = name.extension
+  return "$time-$uid-$hash.$ext"
 }

@@ -1,5 +1,6 @@
 package kr.ac.kw.coms.landmarks.client
 
+import com.beust.klaxon.JsonObject
 import com.beust.klaxon.Klaxon
 import io.ktor.client.call.TypeInfo
 import io.ktor.client.features.json.JsonSerializer
@@ -18,11 +19,7 @@ class KlaxonSerializer(block: Klaxon.() -> Unit = {}) : JsonSerializer {
 
   override suspend fun read(type: TypeInfo, response: HttpResponse): Any {
     val text: String = response.readText()
-    return parse(type.reifiedType, text)
-  }
-
-  @Suppress("UNUSED_PARAMETER")
-  private inline fun <reified T> parse(type: T, json: String): T {
-    return backend.parse(json)!!
+    val json = backend.parser(type.type).parse(StringBuilder(text)) as JsonObject
+    return backend.fromJsonObject(json, type.javaClass, type.type)
   }
 }

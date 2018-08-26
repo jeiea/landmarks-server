@@ -2,6 +2,7 @@ package kr.ac.kw.coms.landmarks.server
 
 import com.beust.klaxon.JsonArray
 import com.beust.klaxon.JsonObject
+import com.beust.klaxon.KlaxonJson
 import com.beust.klaxon.json
 import io.ktor.application.Application
 import io.ktor.application.call
@@ -24,9 +25,13 @@ import io.ktor.sessions.*
 import kotlinx.html.body
 import kotlinx.html.p
 import org.jetbrains.exposed.dao.EntityID
+import org.jetbrains.exposed.sql.Random
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
-import java.util.*
+import java.io.PrintWriter
+import java.io.StringWriter
+
 
 fun main(args: Array<String>) {
   val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
@@ -53,7 +58,12 @@ fun Application.landmarksServer() {
       call.respond(HttpStatusCode.BadRequest, ErrorJson(cause.msg))
     }
     exception<Throwable> { cause ->
-      call.respond(HttpStatusCode.InternalServerError, cause.toString())
+      val sw = StringWriter()
+      val pw = PrintWriter(sw)
+      cause.printStackTrace(pw)
+      val trace = sw.toString() // stack trace as a string
+      log.debug(trace)
+      call.respond(HttpStatusCode.InternalServerError, trace)
     }
   }
   install(Sessions) {
@@ -92,29 +102,21 @@ fun Application.landmarksServer() {
 }
 
 fun Route.problem() = route("/problem") {
-  put("/") {
-    val sess: LMSession = requireLogin()
-    val argId = call.request.queryParameters["picId"]
-    val picId = if (argId == null) {
-      val multipart = call.receiveMultipart()
-      transaction {
-        insertPicture(multipart, sess).generatedKey
-      }
-        ?: throw ValidException("invalid picId")
-    } else {
-      argId.toIntOrNull() ?: throw ValidException("picId should be int")
-    }
-
+  // Incomplete. There is no use at this time.
+  put("/") { _ ->
   }
+
   get("/random") {
-//    val s = Pictures.selectAll().orderBy(Random()).limit(4).toList()
-//    s[0][Pictures.address]
-    val cnt: Int = Picture.count()
-    val pic: Picture = Picture[Random().nextInt(cnt)]
-    val js = json {
-      obj(
-      )
+    val row = transaction {
+      Pictures.selectAll().orderBy(Random()).limit(1).first()
     }
+    val js = KlaxonJson().obj(
+      "id" to row[Pictures.id].value,
+      "address" to row[Pictures.address],
+      "lon" to row[Pictures.longi],
+      "lat" to row[Pictures.latit]
+    )
+    call.respond(js)
   }
 }
 
@@ -143,7 +145,7 @@ fun Routing.collection() = route("/collection") {
   }
 
   post("/{id}") {
-    val sessId = requireLogin().userId
+    requireLogin()
     val colId = call.parameters["id"]?.toIntOrNull() ?: throw ValidException("malformed id")
     val json: CollectionMeta = call.receive()
 
