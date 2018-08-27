@@ -10,20 +10,17 @@ import io.ktor.application.install
 import io.ktor.application.log
 import io.ktor.features.*
 import io.ktor.gson.gson
-import io.ktor.html.respondHtml
-import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.locations.Locations
 import io.ktor.request.receive
-import io.ktor.request.receiveMultipart
 import io.ktor.response.respond
 import io.ktor.response.respondText
 import io.ktor.routing.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.*
-import kotlinx.html.body
-import kotlinx.html.p
+import kr.ac.kw.coms.landmarks.client.ErrorJson
+import kr.ac.kw.coms.landmarks.client.SuccessJson
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.Random
 import org.jetbrains.exposed.sql.selectAll
@@ -83,15 +80,11 @@ fun Application.landmarksServer() {
     }
 
     get("/") {
-      call.respondText("Hello, world!", ContentType.Text.Html)
+      call.respondText("Hello, client!")
     }
-    get("/a") {
-      call.respondHtml {
-        body {
-          p {
-          }
-        }
-      }
+    put("/maintenance/reset") {
+      resetTables()
+      call.respondText("DB reset success")
     }
 
     authentication()
@@ -103,8 +96,7 @@ fun Application.landmarksServer() {
 
 fun Route.problem() = route("/problem") {
   // Incomplete. There is no use at this time.
-  put("/") { _ ->
-  }
+  put("/") { _ -> }
 
   get("/random") {
     val row = transaction {

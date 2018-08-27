@@ -16,6 +16,9 @@ import io.ktor.routing.route
 import io.ktor.sessions.get
 import io.ktor.sessions.sessions
 import io.ktor.sessions.set
+import kr.ac.kw.coms.landmarks.client.ErrorJson
+import kr.ac.kw.coms.landmarks.client.LoginRep
+import kr.ac.kw.coms.landmarks.client.SuccessJson
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.select
@@ -24,19 +27,7 @@ import java.security.MessageDigest
 import java.util.*
 import kotlin.streams.asSequence
 
-// call.receive makes non-nullable field nullable.
-// So non-nullable specifier is useless.
-data class Register(
-  val login: String?,
-  val nick: String?,
-  val password: String?,
-  val email: String?
-)
-
 data class LMSession(val userId: Int)
-
-data class ErrorJson(val error: String)
-data class SuccessJson(val msg: String)
 
 fun getRandomString(length: Long): String {
   val source = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -60,7 +51,7 @@ fun Route.authentication() = route("/auth") {
   }
 
   post("/register") {
-    val reg: Register = call.receive()
+    val reg: LoginRep = call.receive()
     val isMissing: suspend (String, String?) -> Boolean = { name, field ->
       if (field == null) {
         call.respond(ErrorJson("${name} field not found"))
@@ -131,7 +122,7 @@ fun Route.authentication() = route("/auth") {
   }
 
   post("/login") {
-    val param: Register = call.receive()
+    val param: LoginRep = call.receive()
     if (param.login == null) {
       call.respond(ErrorJson("login field missing"))
       return@post
@@ -141,11 +132,11 @@ fun Route.authentication() = route("/auth") {
       return@post
     }
     val user = transaction {
-      Users.select { Users.login eq param.login }
+      Users.select { Users.login eq param.login!! }
         .adjustSlice { slice(Users.id, Users.passhash) }
         .firstOrNull()
     }
-    val hash = getSHA256(param.password)
+    val hash = getSHA256(param.password!!)
     if (user == null || !user[Users.passhash]!!.contentEquals(hash)) {
       call.respond(ErrorJson("password incorrect"))
       return@post

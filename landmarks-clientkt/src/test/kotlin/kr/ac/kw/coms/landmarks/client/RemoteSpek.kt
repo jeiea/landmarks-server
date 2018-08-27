@@ -39,6 +39,10 @@ class RemoteSpek : Spek({
       client.checkAlive()
     }
 
+    blit("reset all DB") {
+      client.resetAllDatabase()
+    }
+
     val ident = getRandomString(8)
     blit("registers a user") {
       client.register(ident, "pasowo", "$ident@b.c", ident)
@@ -49,12 +53,25 @@ class RemoteSpek : Spek({
     }
 
     blit("uploads picture") {
-      client.uploadPic(File("../honeyview_gps.jpg"), 3.3f, 1f, "somewhere")
+      for (i in 0..3) {
+        client.uploadPic(File("../coord$i.jpg"), i.toFloat(), i.toFloat(), "address$i")
+      }
     }
 
     blit("receives quiz") {
       val pic = client.getRandomProblem()
       assert(pic.file!!.size != 0)
+    }
+
+    blit("query user's pictures") {
+      client.getMyPictures()
+    }
+
+    blit("query user's collections") {
+    }
+
+    blit("query a collection") {
+
     }
   }
 })

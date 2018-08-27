@@ -1,9 +1,6 @@
 package kr.ac.kw.coms.landmarks.client
 
-import com.beust.klaxon.JsonBase
-import com.beust.klaxon.JsonObject
-import com.beust.klaxon.KlaxonJson
-import com.beust.klaxon.Parser
+import com.beust.klaxon.*
 import com.beust.klaxon.internal.firstNotNullResult
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
@@ -22,7 +19,7 @@ import java.io.File
 import java.util.*
 import kotlin.math.max
 
-class Remote(base: HttpClient, val basePath: String) {
+class Remote(base: HttpClient, val basePath: String = herokuUri) {
 
   val http: HttpClient
   val nominatimReqLimit = Channel<Long>(1)
@@ -50,7 +47,7 @@ class Remote(base: HttpClient, val basePath: String) {
     header("User-Agent", "landmarks-client")
   }
 
-  private fun HttpRequestBuilder.json(json: JsonBase) {
+  private fun HttpRequestBuilder.json(json: Any) {
     contentType(ContentType.Application.Json)
     body = json
   }
@@ -87,12 +84,20 @@ class Remote(base: HttpClient, val basePath: String) {
     return resp.contains("Hello")
   }
 
+  suspend fun resetAllDatabase() {
+    val resp: String = http.request {
+      method = HttpMethod.Put
+      url("$basePath/maintenance/reset")
+    }
+    throwIfFailure(resp)
+  }
+
   suspend fun register(ident: String, pass: String, email: String, nick: String) {
-    val regFields: JsonObject = KlaxonJson().obj(
-      "login" to ident,
-      "password" to pass,
-      "email" to email,
-      "nick" to nick
+    val regFields = LoginRep(
+      login = ident,
+      password =  pass,
+      email = email,
+      nick = nick
     )
     val resp: String = http.post("$basePath/auth/register") {
       userAgent()
@@ -102,15 +107,11 @@ class Remote(base: HttpClient, val basePath: String) {
   }
 
   suspend fun login(ident: String, pass: String) {
-    val param: JsonObject = KlaxonJson().obj(
-      "login" to ident,
-      "password" to pass
-    )
-    val resp: String = http.post("$basePath/auth/login") {
+    val par = LoginRep(login = ident, password = pass)
+    val profile: LoginRep = http.post("$basePath/auth/login") {
       userAgent()
-      json(param)
+      json(par)
     }
-    throwIfFailure(resp)
   }
 
   suspend fun uploadPic(file: File, latitude: Float? = null, longitude: Float? = null, addr: String? = null) {
@@ -130,18 +131,22 @@ class Remote(base: HttpClient, val basePath: String) {
     throwIfFailure(resp)
   }
 
-  data class PictureRep(
-    val id: Int,
-    val owner: Int? = null,
-    val address: String,
-    val lat: Float,
-    val lon: Float,
-    var file: ByteArray? = null
-  )
 
   suspend fun getRandomProblem(): PictureRep {
     val pic: PictureRep = http.get("$basePath/problem/random")
     pic.file = http.get("$basePath/picture/${pic.id}")
     return pic
   }
+
+  suspend fun getMyPictures() {
+    TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+  }
+
+  suspend fun getOtherPictures(userId: Int) {
+  }
+
+  suspend fun getMyCollections() {
+
+  }
+
 }

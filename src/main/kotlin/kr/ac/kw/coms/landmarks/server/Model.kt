@@ -8,6 +8,7 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SchemaUtils.create
+import org.jetbrains.exposed.sql.SchemaUtils.drop
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.sql.Connection
@@ -90,6 +91,10 @@ fun dbInitialize() {
   if (jdbcUrl == sqliteUrl)
     TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
 
+  createTables()
+}
+
+fun createTables() {
   transaction {
     create(Users)
     create(Pictures)
@@ -104,4 +109,16 @@ fun dbInitialize() {
       }
     }
   }
+}
+
+fun dropTables() {
+  transaction {
+    drop(Users)
+    drop(Pictures)
+  }
+}
+
+fun resetTables() {
+  dropTables()
+  createTables()
 }
