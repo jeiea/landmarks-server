@@ -9,13 +9,13 @@ import java.io.File
 
 @RunWith(JUnitPlatform::class)
 class UploadSpek : Spek({
-  describe("landmarks client") {
+  describe("making heroku server testable") {
     val client = Remote(getTestClient())
 
     blit("resets server and uploads sample problems") {
-      client.resetAllDatabase()
+//      client.resetAllDatabase()
       for (i in 0..3) {
-        client.uploadPic(File("../coord$i.jpg"), i.toFloat(), i.toFloat(), "address$i")
+        client.uploadPicture(File("../coord$i.jpg"), i.toFloat(), i.toFloat(), "address$i")
       }
     }
   }
