@@ -80,4 +80,7 @@ fastlane/screenshots
 fastlane/test_output
 fastlane/readme.md
 
+# self test database
 *.sqlite3
+# upload test assets
+data/

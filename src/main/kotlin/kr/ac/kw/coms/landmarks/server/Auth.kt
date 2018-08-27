@@ -16,9 +16,9 @@ import io.ktor.routing.route
 import io.ktor.sessions.get
 import io.ktor.sessions.sessions
 import io.ktor.sessions.set
-import kr.ac.kw.coms.landmarks.client.ErrorJson
+import kr.ac.kw.coms.landmarks.client.ServerFault
 import kr.ac.kw.coms.landmarks.client.LoginRep
-import kr.ac.kw.coms.landmarks.client.SuccessJson
+import kr.ac.kw.coms.landmarks.client.ServerOK
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.select
@@ -54,7 +54,7 @@ fun Route.authentication() = route("/auth") {
     val reg: LoginRep = call.receive()
     val isMissing: suspend (String, String?) -> Boolean = { name, field ->
       if (field == null) {
-        call.respond(ErrorJson("${name} field not found"))
+        call.respond(ServerFault("${name} field not found"))
         true
       } else false
     }
@@ -66,7 +66,7 @@ fun Route.authentication() = route("/auth") {
 
     val userAgent = context.request.headers["User-Agent"]
     if (userAgent != "landmarks-client") {
-      call.respond(ErrorJson("User-Agent should be landmarks-client"))
+      call.respond(ServerFault("User-Agent should be landmarks-client"))
     }
 
     val digest = getSHA256(reg.password!!)
@@ -84,14 +84,14 @@ fun Route.authentication() = route("/auth") {
       }
     } catch (e: ExposedSQLException) {
       if (e.message?.contains("constraint failed") ?: false) {
-        call.respond(ErrorJson("Already existing user"))
+        call.respond(ServerFault("Already existing user"))
       } else {
         throw e
       }
       return@post
     }
 
-    call.respond(SuccessJson("success"))
+    call.respond(ServerOK("success"))
   }
 
   get("/verification/{verKey}") {
@@ -99,7 +99,7 @@ fun Route.authentication() = route("/auth") {
     if (verKey == "") {
       call.respond(
         HttpStatusCode.NotImplemented,
-        ErrorJson("verification key not present"))
+        ServerFault("verification key not present"))
       return@get
     }
 
@@ -108,7 +108,7 @@ fun Route.authentication() = route("/auth") {
       if (target == null) suspend {
         call.respond(
           HttpStatusCode.NotFound,
-          ErrorJson("invalid verification key"))
+          ServerFault("invalid verification key"))
         false
       }
       else suspend {
@@ -118,17 +118,17 @@ fun Route.authentication() = route("/auth") {
     }
     if (!verified()) return@get
 
-    call.respond(SuccessJson("verification success"))
+    call.respond(ServerOK("verification success"))
   }
 
   post("/login") {
     val param: LoginRep = call.receive()
     if (param.login == null) {
-      call.respond(ErrorJson("login field missing"))
+      call.respond(ServerFault("login field missing"))
       return@post
     }
     if (param.password == null) {
-      call.respond(ErrorJson("password field missing"))
+      call.respond(ServerFault("password field missing"))
       return@post
     }
     val user = transaction {
@@ -138,11 +138,11 @@ fun Route.authentication() = route("/auth") {
     }
     val hash = getSHA256(param.password!!)
     if (user == null || !user[Users.passhash]!!.contentEquals(hash)) {
-      call.respond(ErrorJson("password incorrect"))
+      call.respond(ServerFault("password incorrect"))
       return@post
     }
     call.sessions.set(LMSession(user[Users.id].value))
-    call.respond(SuccessJson("login success"))
+    call.respond(ServerOK("login success"))
   }
 }
 

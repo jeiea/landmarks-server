@@ -19,7 +19,7 @@ import io.ktor.routing.get
 import io.ktor.routing.put
 import io.ktor.routing.route
 import kotlinx.coroutines.experimental.runBlocking
-import kr.ac.kw.coms.landmarks.client.SuccessJson
+import kr.ac.kw.coms.landmarks.client.ServerOK
 import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
@@ -37,7 +37,7 @@ fun Routing.picture() = route("/picture") {
       insertPicture(parts, sess)
     }
 
-    call.respond(SuccessJson("Upload success"))
+    call.respond(ServerOK("Upload success"))
   }
 
   get("/user/{id}") { _ ->

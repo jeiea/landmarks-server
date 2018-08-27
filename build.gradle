@@ -18,8 +18,6 @@ apply plugin: 'com.github.johnrengelman.shadow'
 mainClassName = 'kr.ac.kw.coms.landmarks.server.ApplicationKt'
 
 sourceSets {
-//    main.kotlin.srcDirs = [ 'src/main' ]
-//    test.kotlin.srcDirs = [ 'src/test' ]
     main.resources.srcDirs = [ 'src/main/res' ]
 }
 

@@ -19,8 +19,8 @@ import io.ktor.routing.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.*
-import kr.ac.kw.coms.landmarks.client.ErrorJson
-import kr.ac.kw.coms.landmarks.client.SuccessJson
+import kr.ac.kw.coms.landmarks.client.ServerFault
+import kr.ac.kw.coms.landmarks.client.ServerOK
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.Random
 import org.jetbrains.exposed.sql.selectAll
@@ -52,15 +52,13 @@ fun Application.landmarksServer() {
   install(Locations)
   install(StatusPages) {
     exception<ValidException> { cause ->
-      call.respond(HttpStatusCode.BadRequest, ErrorJson(cause.msg))
+      call.respond(HttpStatusCode.BadRequest, ServerFault(cause.msg))
     }
     exception<Throwable> { cause ->
-      val sw = StringWriter()
-      val pw = PrintWriter(sw)
-      cause.printStackTrace(pw)
-      val trace = sw.toString() // stack trace as a string
+      val trace: String = stacktraceToString(cause)
       log.debug(trace)
-      call.respond(HttpStatusCode.InternalServerError, trace)
+      val json = ServerFault(cause.message ?: "", trace)
+      call.respond(HttpStatusCode.InternalServerError, json)
     }
   }
   install(Sessions) {
@@ -92,6 +90,12 @@ fun Application.landmarksServer() {
     collection()
     problem()
   }
+}
+
+fun stacktraceToString(cause: Throwable): String {
+  return StringWriter().also { sw ->
+    cause.printStackTrace(PrintWriter(sw))
+  }.toString()
 }
 
 fun Route.problem() = route("/problem") {
@@ -150,7 +154,7 @@ fun Routing.collection() = route("/collection") {
       if (json.parent != null)
         col.parent = EntityID(json.parent, Collections)
     }
-    call.respond(SuccessJson("update success"))
+    call.respond(ServerOK("update success"))
   }
 
   get("/user/{id?}") { _ ->
