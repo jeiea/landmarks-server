@@ -3,7 +3,6 @@ package kr.ac.kw.coms.landmarks.server
 import com.beust.klaxon.JsonArray
 import com.beust.klaxon.JsonObject
 import com.beust.klaxon.KlaxonJson
-import com.beust.klaxon.json
 import com.drew.imaging.ImageMetadataReader
 import com.drew.metadata.exif.GpsDirectory
 import io.ktor.application.call
@@ -20,6 +19,7 @@ import io.ktor.routing.get
 import io.ktor.routing.put
 import io.ktor.routing.route
 import kotlinx.coroutines.experimental.runBlocking
+import kr.ac.kw.coms.landmarks.client.SuccessJson
 import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
