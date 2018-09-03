@@ -16,8 +16,8 @@ import io.ktor.routing.route
 import io.ktor.sessions.get
 import io.ktor.sessions.sessions
 import io.ktor.sessions.set
-import kr.ac.kw.coms.landmarks.client.ServerFault
 import kr.ac.kw.coms.landmarks.client.LoginRep
+import kr.ac.kw.coms.landmarks.client.ServerFault
 import kr.ac.kw.coms.landmarks.client.ServerOK
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.deleteWhere
@@ -124,25 +124,23 @@ fun Route.authentication() = route("/auth") {
   post("/login") {
     val param: LoginRep = call.receive()
     if (param.login == null) {
-      call.respond(ServerFault("login field missing"))
+      call.respond(ValidException("login field missing"))
       return@post
     }
     if (param.password == null) {
-      call.respond(ServerFault("password field missing"))
+      call.respond(ValidException("password field missing"))
       return@post
     }
     val user = transaction {
-      Users.select { Users.login eq param.login!! }
-        .adjustSlice { slice(Users.id, Users.passhash) }
-        .firstOrNull()
+      User.find { Users.login eq param.login!! }.firstOrNull()
     }
     val hash = getSHA256(param.password!!)
-    if (user == null || !user[Users.passhash]!!.contentEquals(hash)) {
-      call.respond(ServerFault("password incorrect"))
+    if (user == null || !user.passhash!!.contentEquals(hash)) {
+      call.respond(ValidException("password incorrect"))
       return@post
     }
-    call.sessions.set(LMSession(user[Users.id].value))
-    call.respond(ServerOK("login success"))
+    call.sessions.set(LMSession(user.id.value))
+    call.respond(LoginRep(user.id.value, user.login, email = user.email, nick = user.nick))
   }
 }
 
