@@ -4,6 +4,7 @@ import com.beust.klaxon.Json
 import com.beust.klaxon.JsonObject
 import com.beust.klaxon.Parser
 import com.beust.klaxon.internal.firstNotNullResult
+import java.util.*
 
 data class ServerFault(
   val error: String,
@@ -26,7 +27,8 @@ data class PictureRep(
   val address: String,
   val lat: Float,
   val lon: Float,
-  var file: ByteArray? = null
+  var file: ByteArray? = null,
+  var time: Date? = null
 )
 
 /**

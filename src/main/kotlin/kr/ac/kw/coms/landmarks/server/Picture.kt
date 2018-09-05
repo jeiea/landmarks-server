@@ -24,6 +24,7 @@ import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.joda.time.DateTime
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -50,7 +51,8 @@ fun Routing.picture() = route("/picture") {
           "owner" to it.owner,
           "address" to it.address,
           "latit" to it.latit,
-          "longi" to it.longi
+          "longi" to it.longi,
+          "created" to it.created
         )
       })
     }
@@ -90,10 +92,11 @@ fun insertPicture(parts: MultiPartData, sess: LMSession): Picture {
 private fun assemblePicture(record: Picture, userId: Int):
   suspend (PartData) -> Unit = fld@{ part ->
 
-  sl@ when (part) {
+  when (part) {
     is PartData.FormItem -> fillFormField(record, part)
     is PartData.FileItem -> receivePictureFile(record, part, userId)
   }
+  record.created = DateTime.now()
 
   part.dispose()
 }

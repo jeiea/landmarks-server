@@ -30,6 +30,7 @@ object Pictures : IntIdTable() {
   val address = varchar("address", 50).nullable()
   val latit = float("latit").nullable()
   val longi = float("longi").nullable()
+  val created = datetime("created")
 }
 
 object Quiz : IntIdTable() {
@@ -68,6 +69,7 @@ class Picture(id: EntityID<Int>): IntEntity(id) {
   var address by Pictures.address
   var latit by Pictures.latit
   var longi by Pictures.longi
+  var created by Pictures.created
 }
 
 class Collection(id: EntityID<Int>) : IntEntity(id) {
