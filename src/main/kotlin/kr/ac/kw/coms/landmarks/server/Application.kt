@@ -56,7 +56,7 @@ fun Application.landmarksServer() {
     }
     exception<Throwable> { cause ->
       val trace: String = stacktraceToString(cause)
-      log.debug(trace)
+      log.error(trace)
       val json = ServerFault(cause.message ?: "", trace)
       call.respond(HttpStatusCode.InternalServerError, json)
     }
@@ -102,17 +102,20 @@ fun Route.problem() = route("/problem") {
   // Incomplete. There is no use at this time.
   put("/") { _ -> }
 
-  get("/random") {
-    val row = transaction {
-      Pictures.selectAll().orderBy(Random()).limit(1).first()
+  get("/random/{n}") { _ ->
+    val n: Int = call.parameters["n"]?.toIntOrNull() ?: 1
+    val ar = JsonArray<JsonObject>()
+    val rows = transaction {
+      Pictures.selectAll().orderBy(Random()).limit(n).forEach {
+        ar.add(JsonObject(mapOf(
+          "id" to it[Pictures.id].value,
+          "address" to it[Pictures.address],
+          "lon" to it[Pictures.longi],
+          "lat" to it[Pictures.latit]
+        )))
+      }
     }
-    val js = KlaxonJson().obj(
-      "id" to row[Pictures.id].value,
-      "address" to row[Pictures.address],
-      "lon" to row[Pictures.longi],
-      "lat" to row[Pictures.latit]
-    )
-    call.respond(js)
+    call.respond(ar)
   }
 }
 
