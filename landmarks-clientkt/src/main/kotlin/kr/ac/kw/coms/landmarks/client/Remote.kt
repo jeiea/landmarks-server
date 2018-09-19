@@ -93,6 +93,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
   suspend fun reverseGeocodeUnsafe(latitude: Double, longitude: Double): ReverseGeocodeResult {
     val json: String = get("https://nominatim.openstreetmap.org/reverse") {
       parameter("format", "json")
+      parameter("accept-language", "ko,en")
       parameter("lat", latitude.toString())
       parameter("lon", longitude.toString())
       userAgent(chromeAgent)
