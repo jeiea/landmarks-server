@@ -75,16 +75,16 @@ class RemoteSpek : Spek({
       client.getPicture(pics[1].id).readBytes().size `should be greater than` 0
     }
 
-    blit("query user's pictures") {
-      TODO()
+    blit("query my pictures") {
+      client.getMyPictureInfos()
     }
 
-    blit("query user's collections") {
-      TODO()
+    blit("query my collections") {
+      client.getMyCollections()
     }
 
     blit("query a collection") {
-      TODO()
+      client.getCollections(0)
     }
   }
 })

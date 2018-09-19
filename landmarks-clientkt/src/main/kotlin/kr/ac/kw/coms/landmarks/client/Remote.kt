@@ -9,14 +9,17 @@ import io.ktor.client.features.cookies.AcceptAllCookiesStorage
 import io.ktor.client.features.cookies.HttpCookies
 import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.client.response.HttpResponse
 import io.ktor.http.*
 import kotlinx.coroutines.experimental.channels.ArrayChannel
 import kotlinx.coroutines.experimental.channels.sendBlocking
 import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.io.jvm.javaio.toOutputStream
 import kotlinx.io.InputStream
+import kotlinx.io.core.writeFully
 import java.io.File
+import java.net.URLEncoder
 import java.util.*
 import kotlin.math.max
 
@@ -132,17 +135,21 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return profile!!
   }
 
+  fun filenameHeader(name: String): Headers {
+    return headersOf(HttpHeaders.ContentDisposition, "filename=$name")
+  }
+
   suspend fun uploadPicture(file: File, latitude: Float? = null, longitude: Float? = null, addr: String? = null) {
-    val content = MultiPartContent.build {
-      latitude?.also { add("lat", it.toString()) }
-      longitude?.also { add("lon", it.toString()) }
-      addr?.also { add("address", it) }
-      add("pic0", filename = file.name) {
-        file.inputStream().copyToSuspend(toOutputStream())
-      }
-    }
+    val filename: String = URLEncoder.encode(file.name, "UTF-8")
     put<Unit>("$basePath/picture") {
-      body = content
+      body = MultiPartFormDataContent(formData {
+        latitude?.also { append("lat", it.toString()) }
+        longitude?.also { append("lon", it.toString()) }
+        addr?.also { append("address", it) }
+        append("pic0", filenameHeader(filename)) {
+          writeFully(file.readBytes())
+        }
+      })
     }
   }
 
@@ -150,18 +157,28 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return get("$basePath/problem/random/$n")
   }
 
+  suspend fun modifyPicture(id: Int) {
+
+  }
+
   suspend fun getPicture(id: Int): InputStream {
     return get("$basePath/picture/${id}")
   }
 
-  suspend fun getPictureInfos(userId: Int) {
+  suspend fun getPictureInfos(userId: Int): List<PictureRep> {
+    TODO()
   }
 
-  suspend fun getMyPictureInfos() {
+  suspend fun getMyPictureInfos(): List<PictureRep> {
     return getPictureInfos(profile!!.id!!)
   }
 
-  suspend fun getMyCollections() {
+  suspend fun getCollections(ownerId: Int): List<CollectionRep> {
+    TODO()
+  }
+
+  suspend fun getMyCollections(): List<CollectionRep> {
+    return getCollections(profile!!.id!!)
   }
 
 }

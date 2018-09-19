@@ -52,21 +52,20 @@ fun Route.authentication() = route("/auth") {
 
   post("/register") {
     val reg: LoginRep = call.receive()
-    val isMissing: suspend (String, String?) -> Boolean = { name, field ->
+    fun throwIfMissing(name: String, field: String?) {
       if (field == null) {
-        call.respond(ServerFault("${name} field not found"))
-        true
-      } else false
+        throw ValidException("${name} field not found")
+      }
     }
 
-    if (isMissing("email", reg.email)) return@post
-    if (isMissing("login", reg.login)) return@post
-    if (isMissing("password", reg.password)) return@post
-    if (isMissing("nick", reg.nick)) return@post
+    throwIfMissing("email", reg.email)
+    throwIfMissing("login", reg.login)
+    throwIfMissing("password", reg.password)
+    throwIfMissing("nick", reg.nick)
 
     val userAgent = context.request.headers["User-Agent"]
     if (userAgent != "landmarks-client") {
-      call.respond(ServerFault("User-Agent should be landmarks-client"))
+      throw ValidException("User-Agent should be landmarks-client")
     }
 
     val digest = getSHA256(reg.password!!)
@@ -83,12 +82,17 @@ fun Route.authentication() = route("/auth") {
         }
       }
     } catch (e: ExposedSQLException) {
-      if (e.message?.contains("constraint failed") ?: false) {
-        call.respond(ServerFault("Already existing user"))
-      } else {
+      val msg: String = e.message ?: throw e
+      if (!msg.contains("constraint failed")) {
         throw e
       }
-      return@post
+      val guide: String = when {
+        msg.contains("login") -> "Already exising id"
+        msg.contains("nick") -> "Already exising nick"
+        msg.contains("email") -> "Already exising email"
+        else -> throw e
+      }
+      throw ValidException(guide)
     }
 
     call.respond(ServerOK("success"))
@@ -97,47 +101,34 @@ fun Route.authentication() = route("/auth") {
   get("/verification/{verKey}") {
     val verKey = call.parameters["verKey"] ?: ""
     if (verKey == "") {
-      call.respond(
-        HttpStatusCode.NotImplemented,
-        ServerFault("verification key not present"))
-      return@get
+      throw ValidException("verification key not present")
     }
 
-    val verified = transaction {
+    transaction {
       val target = Users.select { Users.verification eq verKey }.firstOrNull()
-      if (target == null) suspend {
-        call.respond(
-          HttpStatusCode.NotFound,
-          ServerFault("invalid verification key"))
-        false
+      if (target == null) {
+        throw ValidException("invalid verification key")
       }
-      else suspend {
+      else {
         Users.deleteWhere { Users.verification eq verKey }
-        true
       }
     }
-    if (!verified()) return@get
-
-    call.respond(ServerOK("verification success"))
   }
 
   post("/login") {
     val param: LoginRep = call.receive()
     if (param.login == null) {
-      call.respond(ValidException("login field missing"))
-      return@post
+      throw ValidException("login field missing")
     }
     if (param.password == null) {
-      call.respond(ValidException("password field missing"))
-      return@post
+      throw ValidException("password field missing")
     }
     val user = transaction {
       User.find { Users.login eq param.login!! }.firstOrNull()
     }
     val hash = getSHA256(param.password!!)
     if (user == null || !user.passhash!!.contentEquals(hash)) {
-      call.respond(ValidException("password incorrect"))
-      return@post
+      throw ValidException("password incorrect")
     }
     call.sessions.set(LMSession(user.id.value))
     call.respond(LoginRep(user.id.value, user.login, email = user.email, nick = user.nick))

@@ -4,6 +4,7 @@ import com.beust.klaxon.JsonArray
 import com.beust.klaxon.JsonObject
 import com.beust.klaxon.KlaxonJson
 import com.drew.imaging.ImageMetadataReader
+import com.drew.lang.GeoLocation
 import com.drew.metadata.exif.GpsDirectory
 import io.ktor.application.call
 import io.ktor.http.HttpStatusCode
@@ -132,14 +133,19 @@ suspend fun receivePictureFile(record: Picture, part: PartData.FileItem, userId:
     record.thumbnail = SerialBlob(buffer.toByteArray())
     buffer.reset()
 
-    ImageMetadataReader
-      .readMetadata(ByteArrayInputStream(ar))
-      .getFirstDirectoryOfType(GpsDirectory::class.java)
-      ?.geoLocation
-      ?.also {
-        record.latit = it.latitude.toFloat()
-        record.longi = it.longitude.toFloat()
-      }
+    getLatLon(ar)?.also { (lat, lon) ->
+      record.latit = lat
+      record.longi = lon
+    }
+  }
+}
+
+fun getLatLon(ar: ByteArray): Pair<Float, Float>? {
+  return ImageMetadataReader
+    .readMetadata(ByteArrayInputStream(ar))
+    .getFirstDirectoryOfType(GpsDirectory::class.java)
+    ?.geoLocation?.run {
+    Pair(latitude.toFloat(), longitude.toFloat())
   }
 }
 
