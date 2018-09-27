@@ -31,6 +31,7 @@ object Pictures : IntIdTable() {
   val latit = float("latit").nullable()
   val longi = float("longi").nullable()
   val created = datetime("created")
+  val public = bool("public")
 }
 
 object Quiz : IntIdTable() {
@@ -43,9 +44,20 @@ object Quiz : IntIdTable() {
 object Collections : IntIdTable() {
   val created = datetime("created")
   val title = varchar("title", 50)
+  val description = text("description")
   val isRoute = bool("isRoute").default(false)
   val owner = reference("owner", Users)
   val parent = reference("parent", Collections).nullable()
+}
+
+object CollectionPics : Table() {
+  val collection = reference("collection", Collections)
+  val picture = reference("picture", Pictures)
+}
+
+object CollectionLikes : Table() {
+  val collection = reference("collection", Collections)
+  val liker = reference("liker", Users)
 }
 
 class User(id: EntityID<Int>): IntEntity(id){
@@ -70,6 +82,7 @@ class Picture(id: EntityID<Int>): IntEntity(id) {
   var latit by Pictures.latit
   var longi by Pictures.longi
   var created by Pictures.created
+  var public by Pictures.public
 }
 
 class Collection(id: EntityID<Int>) : IntEntity(id) {
@@ -77,6 +90,7 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
 
   var created by Collections.created
   var title by Collections.title
+  var description by Collections.description
   var isRoute by Collections.isRoute
   var owner by Collections.owner
   var parent by Collections.parent

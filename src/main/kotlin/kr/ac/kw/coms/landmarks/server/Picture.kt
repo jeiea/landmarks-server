@@ -1,17 +1,15 @@
 package kr.ac.kw.coms.landmarks.server
 
-import com.beust.klaxon.JsonArray
-import com.beust.klaxon.JsonObject
-import com.beust.klaxon.KlaxonJson
 import com.drew.imaging.ImageMetadataReader
-import com.drew.lang.GeoLocation
 import com.drew.metadata.exif.GpsDirectory
+import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.MultiPartData
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
 import io.ktor.http.content.streamProvider
+import io.ktor.pipeline.PipelineContext
 import io.ktor.request.receiveMultipart
 import io.ktor.response.respond
 import io.ktor.response.respondBytes
@@ -20,10 +18,11 @@ import io.ktor.routing.get
 import io.ktor.routing.put
 import io.ktor.routing.route
 import kotlinx.coroutines.experimental.runBlocking
-import kr.ac.kw.coms.landmarks.client.ServerOK
+import kr.ac.kw.coms.landmarks.client.PictureRep
 import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 import java.io.ByteArrayInputStream
@@ -32,53 +31,82 @@ import java.io.File
 import javax.sql.rowset.serial.SerialBlob
 
 fun Routing.picture() = route("/picture") {
+
   put("/") {
     val parts: MultiPartData = call.receiveMultipart()
-    val sess = requireLogin()
-    transaction {
+    val sess: LMSession = requireLogin()
+    val pic: Picture = transaction {
       insertPicture(parts, sess)
     }
 
-    call.respond(ServerOK("Upload success"))
+    call.respond(PictureRep(
+      pic.id.value, pic.owner.value, pic.address,
+      pic.latit, pic.longi, time = pic.created.toDate()))
   }
 
   get("/user/{id}") { _ ->
-    val ar = JsonArray<JsonObject>()
-    transaction {
-      ar.addAll(Picture.all().map {
-        KlaxonJson().obj(
-          "id" to it.id,
-          "filename" to it.filename,
-          "owner" to it.owner,
-          "address" to it.address,
-          "latit" to it.latit,
-          "longi" to it.longi,
-          "created" to it.created
+    val ar = arrayListOf<PictureRep>()
+    val calleeId: Int = getParamId(call)
+    val callerId: Int = requireLogin().userId
+    ar.addAll(transaction {
+      Picture.find {
+        isGrantedTo(callerId) and (Pictures.owner eq calleeId)
+      }.map {
+        PictureRep(
+          it.id.value, it.owner.value, it.address,
+          it.latit, it.longi, it.created.toDate()
         )
-      })
-    }
-    call.respond(ar.toJsonString())
+      }
+    })
+    call.respond(ar)
   }
 
   get("/{id}") {
-    val id = call.parameters["id"]?.toIntOrNull() ?: throw ValidException("id not valid")
+    val id: Int = getParamId(call)
+    val userId: Int = requireLogin().userId
     val bytes = transaction {
-      val pic = Picture.findById(id)
-        ?: throw ValidException("Not found", HttpStatusCode.NotFound)
-      pic.file.binaryStream.readBytes()
+      val p = Picture.find { isGrantedTo(userId) and (Pictures.id eq id) }.firstOrNull()
+        p ?: throw ValidException("Not found", HttpStatusCode.NotFound)
+      p.file.binaryStream.readBytes()
     }
     call.respondBytes(bytes)
   }
 
+  get("/{id}/info") { _ ->
+    val id: Int = getParamId(call)
+    val userId: Int = requireLogin().userId
+    val pic: PictureRep? = transaction {
+      Picture.find {
+        isGrantedTo(userId) and (Pictures.id eq id)
+      }.firstOrNull()?.run {
+        PictureRep(
+          id, owner.value, address, latit, longi,
+          created.toDate(), public
+        )
+      }
+    }
+    if (pic == null || pic.owner != userId && !pic.isPublic) {
+      call.respond(HttpStatusCode.NotFound)
+    } else {
+      call.respond(pic)
+    }
+  }
+
   get("/thumbnail/{id}") {
-    val id = call.parameters["id"]?.toIntOrNull() ?: throw ValidException("id not valid")
+    val id: Int = getParamId(call)
+    val userId: Int = requireLogin().userId
     val bytes = transaction {
-      val pic = Picture.findById(id)
-        ?: throw ValidException("Not found", HttpStatusCode.NotFound)
+      val pic = Picture.find {
+        isGrantedTo(userId) and (Pictures.id eq id)
+      }.firstOrNull() ?: throw ValidException("Not found", HttpStatusCode.NotFound)
       pic.thumbnail.binaryStream.readBytes()
     }
     call.respondBytes(bytes)
   }
+}
+
+fun SqlExpressionBuilder.isGrantedTo(userId: Int): Op<Boolean> {
+  return (Pictures.public eq true) or (Pictures.owner eq userId)
 }
 
 fun insertPicture(parts: MultiPartData, sess: LMSession): Picture {
@@ -114,6 +142,9 @@ fun fillFormField(record: Picture, part: PartData.FormItem) {
     }
     "address" -> {
       record.address = part.value
+    }
+    "isPublic" -> {
+      record.public = part.value.toBoolean()
     }
   }
 }

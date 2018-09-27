@@ -24,20 +24,21 @@ data class LoginRep(
 data class PictureRep(
   val id: Int,
   val owner: Int? = null,
-  val address: String?,
-  val lat: Float?,
-  val lon: Float?,
-  var file: ByteArray? = null,
-  var time: Date? = null
+  val address: String? = null,
+  val lat: Float? = null,
+  val lon: Float? = null,
+  var time: Date? = null,
+  var isPublic: Boolean = true
 )
 
 data class CollectionRep(
   val id: Int,
-  val title: String,
-  val text: String,
-  val images: List<Int>,
-  val likes: Int,
-  val liking: Boolean
+  val title: String?,
+  val text: String?,
+  val images: List<Int>?,
+  val likes: Int?,
+  val liking: Boolean?,
+  val isRoute: Boolean?
 )
 
 /**

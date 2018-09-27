@@ -140,9 +140,9 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return headersOf(HttpHeaders.ContentDisposition, "filename=$name")
   }
 
-  suspend fun uploadPicture(file: File, latitude: Float? = null, longitude: Float? = null, addr: String? = null) {
+  suspend fun uploadPicture(file: File, latitude: Float? = null, longitude: Float? = null, addr: String? = null): PictureRep {
     val filename: String = URLEncoder.encode(file.name, "UTF-8")
-    put<Unit>("$basePath/picture") {
+    return put("$basePath/picture") {
       body = MultiPartFormDataContent(formData {
         latitude?.also { append("lat", it.toString()) }
         longitude?.also { append("lon", it.toString()) }
@@ -158,16 +158,24 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return get("$basePath/problem/random/$n")
   }
 
-  suspend fun modifyPicture(id: Int) {
+  suspend fun modifyPicture(info: PictureRep): PictureRep {
+    return post("$basePath/picture/${info.id}")
+  }
 
+  suspend fun getPictureInfo(id: Int): PictureRep {
+    return get("$basePath/picture/$id/info")
+  }
+
+  suspend fun deletePicture(id: Int) {
+    TODO()
   }
 
   suspend fun getPicture(id: Int): InputStream {
-    return get("$basePath/picture/${id}")
+    return get("$basePath/picture/$id")
   }
 
   suspend fun getPictureInfos(userId: Int): List<PictureRep> {
-    TODO()
+    return get("$basePath/picture/user/$userId")
   }
 
   suspend fun getMyPictureInfos(): List<PictureRep> {
@@ -175,7 +183,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
   }
 
   suspend fun getCollections(ownerId: Int): List<CollectionRep> {
-    TODO()
+    return get("$basePath/collection/user/$ownerId")
   }
 
   suspend fun getMyCollections(): List<CollectionRep> {

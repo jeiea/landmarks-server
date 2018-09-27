@@ -6,10 +6,7 @@ import io.ktor.client.engine.config
 import io.ktor.client.features.cookies.AcceptAllCookiesStorage
 import io.ktor.client.features.cookies.HttpCookies
 import kotlinx.coroutines.experimental.runBlocking
-import org.amshove.kluent.`should be equal to`
-import org.amshove.kluent.`should be greater than`
-import org.amshove.kluent.`should be true`
-import org.amshove.kluent.`should not be equal to`
+import org.amshove.kluent.*
 import org.apache.http.HttpHost
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy
 import org.apache.http.ssl.SSLContextBuilder
@@ -26,7 +23,7 @@ import java.util.*
 
 @RunWith(JUnitPlatform::class)
 class RemoteSpek : Spek({
-  describe("landmarks client") {
+  describe("landmarks server single user") {
     val client = Remote(getTestClient(), "http://localhost:8080")
 
     xblit("does reverse geocoding") {
@@ -59,20 +56,35 @@ class RemoteSpek : Spek({
       profile = p
     }
 
+    val pics: ArrayList<PictureRep> = arrayListOf()
     blit("uploads picture") {
       for (i in 0..3) {
-        client.uploadPicture(File("../data/coord$i.jpg"), i.toFloat(), i.toFloat(), "address$i")
+        val gps = i.toFloat()
+        val pic = client.uploadPicture(File("../data/coord$i.jpg"), gps, gps, "address$i")
+        pics.add(pic)
       }
     }
 
-    val pics: ArrayList<PictureRep> = arrayListOf()
     blit("receives quiz info") {
-      pics.addAll(client.getRandomProblems(2))
-      pics[0].id `should not be equal to` pics[1].id
+      val quizs: ArrayList<PictureRep> = arrayListOf()
+      quizs.addAll(client.getRandomProblems(2))
+      quizs[0].id `should not be equal to` quizs[1].id
     }
 
     blit("download picture") {
-      client.getPicture(pics[1].id).readBytes().size `should be greater than` 0
+      client.getPicture(pics[0].id).readBytes().size `should be greater than` 0
+    }
+
+    val rep: PictureRep = pics[0].copy(address = "Manhatan?", lat = 110.0f, lon = 20.0f)
+    blit("modify picture info") {
+      client.modifyPicture(rep)
+    }
+
+    blit("receive picture info") {
+      val modified: PictureRep = client.getPictureInfo(pics[0].id)
+      modified.address!! `should be equal to` rep.address!!
+      modified.lat!! `should be equal to` rep.lat!!
+      modified.lon!! `should be equal to` rep.lon!!
     }
 
     blit("query my pictures") {
