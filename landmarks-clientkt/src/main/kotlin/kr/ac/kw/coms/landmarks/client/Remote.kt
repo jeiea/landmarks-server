@@ -39,6 +39,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     val response: HttpResponse = http.request {
       this.method = method
       url(url)
+      header("User-Agent", "landmarks-client")
       builder()
     }
     if (response.status.isSuccess()) {
@@ -47,13 +48,13 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     throw response.call.receive<ServerFault>()
   }
 
-  suspend inline fun <reified T> get(url: String, builder: HttpRequestBuilder.() -> Unit = {}): T =
+  private suspend inline fun <reified T> get(url: String, builder: HttpRequestBuilder.() -> Unit = {}): T =
     request(HttpMethod.Get, url, builder)
 
-  suspend inline fun <reified T> post(url: String, builder: HttpRequestBuilder.() -> Unit = {}): T =
+  private suspend inline fun <reified T> post(url: String, builder: HttpRequestBuilder.() -> Unit = {}): T =
     request(HttpMethod.Post, url, builder)
 
-  suspend inline fun <reified T> put(url: String, builder: HttpRequestBuilder.() -> Unit = {}): T =
+  private suspend inline fun <reified T> put(url: String, builder: HttpRequestBuilder.() -> Unit = {}): T =
     request(HttpMethod.Put, url, builder)
 
   init {
@@ -68,10 +69,6 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
   }
 
   constructor() : this(HttpClient(Android.create()), herokuUri)
-
-  private fun HttpRequestBuilder.userAgent() {
-    header("User-Agent", "landmarks-client")
-  }
 
   private fun HttpRequestBuilder.json(json: Any) {
     contentType(ContentType.Application.Json)
@@ -90,7 +87,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return ret
   }
 
-  suspend fun reverseGeocodeUnsafe(latitude: Double, longitude: Double): ReverseGeocodeResult {
+  private suspend fun reverseGeocodeUnsafe(latitude: Double, longitude: Double): ReverseGeocodeResult {
     val json: String = get("https://nominatim.openstreetmap.org/reverse") {
       parameter("format", "json")
       parameter("accept-language", "ko,en")
@@ -103,11 +100,11 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
   }
 
   suspend fun checkAlive(): Boolean {
-    try {
+    return try {
       get<Unit>("$basePath/")
-      return true
+      true
     } catch (e: Throwable) {
-      return false
+      false
     }
   }
 
@@ -123,20 +120,18 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
       nick = nick
     )
     post<Unit>("$basePath/auth/register") {
-      userAgent()
       json(regFields)
     }
   }
 
   suspend fun login(ident: String, pass: String): LoginRep {
     profile = post("$basePath/auth/login") {
-      userAgent()
       json(LoginRep(login = ident, password = pass))
     }
     return profile!!
   }
 
-  fun filenameHeader(name: String): Headers {
+  private fun filenameHeader(name: String): Headers {
     return headersOf(HttpHeaders.ContentDisposition, "filename=$name")
   }
 
@@ -182,6 +177,13 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return getPictureInfos(profile!!.id!!)
   }
 
+
+  suspend fun uploadCollection(collection: CollectionRep): CollectionRep {
+    return put("$basePath/collection") {
+      json(collection)
+    }
+  }
+
   suspend fun getCollections(ownerId: Int): List<CollectionRep> {
     return get("$basePath/collection/user/$ownerId")
   }
@@ -189,5 +191,16 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
   suspend fun getMyCollections(): List<CollectionRep> {
     return getCollections(profile!!.id!!)
   }
+
+  suspend fun modifyCollection(collection: CollectionRep): CollectionRep {
+    return post("$basePath/collection/${collection.id}") {
+      json(collection)
+    }
+  }
+
+  suspend fun deleteCollection(id: Int) {
+    TODO()
+  }
+
 
 }

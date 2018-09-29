@@ -13,6 +13,7 @@ import io.ktor.routing.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.*
+import kr.ac.kw.coms.landmarks.client.PictureRep
 import kr.ac.kw.coms.landmarks.client.ServerFault
 import org.jetbrains.exposed.sql.Random
 import org.jetbrains.exposed.sql.selectAll
@@ -93,24 +94,22 @@ fun getParamId(call: ApplicationCall): Int {
   return call.parameters["id"]?.toIntOrNull() ?: throw ValidException("id not valid")
 }
 
+fun notFoundPage(): Nothing {
+  throw ValidException("Not found", HttpStatusCode.NotFound)
+}
+
 fun Route.problem() = route("/problem") {
   // Incomplete. There is no use at this time.
   put("/") { _ -> }
 
   get("/random/{n}") { _ ->
     val n: Int = call.parameters["n"]?.toIntOrNull() ?: 1
-    val ar = JsonArray<JsonObject>()
-    val rows = transaction {
-      Pictures.selectAll().orderBy(Random()).limit(n).forEach {
-        ar.add(JsonObject(mapOf(
-          "id" to it[Pictures.id].value,
-          "address" to it[Pictures.address],
-          "lon" to it[Pictures.longi],
-          "lat" to it[Pictures.latit]
-        )))
-      }
+    val pics: List<PictureRep> = transaction {
+      Pictures
+        .selectAll().orderBy(Random()).limit(n)
+        .map(Pictures::toPictureRep)
     }
-    call.respond(ar)
+    call.respond(pics)
   }
 }
 

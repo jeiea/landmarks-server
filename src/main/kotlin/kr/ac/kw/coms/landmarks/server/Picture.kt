@@ -38,10 +38,7 @@ fun Routing.picture() = route("/picture") {
     val pic: Picture = transaction {
       insertPicture(parts, sess)
     }
-
-    call.respond(PictureRep(
-      pic.id.value, pic.owner.value, pic.address,
-      pic.latit, pic.longi, time = pic.created.toDate()))
+    call.respond(pic.toPictureRep())
   }
 
   get("/user/{id}") { _ ->
@@ -51,12 +48,7 @@ fun Routing.picture() = route("/picture") {
     ar.addAll(transaction {
       Picture.find {
         isGrantedTo(callerId) and (Pictures.owner eq calleeId)
-      }.map {
-        PictureRep(
-          it.id.value, it.owner.value, it.address,
-          it.latit, it.longi, it.created.toDate()
-        )
-      }
+      }.map(Picture::toPictureRep)
     })
     call.respond(ar)
   }
@@ -66,7 +58,7 @@ fun Routing.picture() = route("/picture") {
     val userId: Int = requireLogin().userId
     val bytes = transaction {
       val p = Picture.find { isGrantedTo(userId) and (Pictures.id eq id) }.firstOrNull()
-        p ?: throw ValidException("Not found", HttpStatusCode.NotFound)
+        p ?: notFoundPage()
       p.file.binaryStream.readBytes()
     }
     call.respondBytes(bytes)
@@ -78,12 +70,7 @@ fun Routing.picture() = route("/picture") {
     val pic: PictureRep? = transaction {
       Picture.find {
         isGrantedTo(userId) and (Pictures.id eq id)
-      }.firstOrNull()?.run {
-        PictureRep(
-          id, owner.value, address, latit, longi,
-          created.toDate(), public
-        )
-      }
+      }.firstOrNull()?.toPictureRep()
     }
     if (pic == null || pic.owner != userId && !pic.isPublic) {
       call.respond(HttpStatusCode.NotFound)

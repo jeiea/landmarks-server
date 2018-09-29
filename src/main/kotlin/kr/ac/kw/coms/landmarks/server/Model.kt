@@ -1,14 +1,20 @@
 package kr.ac.kw.coms.landmarks.server
 
+import com.beust.klaxon.JsonObject
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import kr.ac.kw.coms.landmarks.client.CollectionRep
+import kr.ac.kw.coms.landmarks.client.PictureRep
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.SchemaUtils.drop
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.sql.Connection
@@ -32,6 +38,17 @@ object Pictures : IntIdTable() {
   val longi = float("longi").nullable()
   val created = datetime("created")
   val public = bool("public")
+
+  fun toPictureRep(row: ResultRow): PictureRep {
+    return PictureRep(
+      row[Pictures.id].value,
+      row[Pictures.owner].value,
+      row[Pictures.address],
+      row[Pictures.latit],
+      row[Pictures.longi],
+      row[Pictures.created].toDate(),
+      row[Pictures.public])
+  }
 }
 
 object Quiz : IntIdTable() {
@@ -60,7 +77,7 @@ object CollectionLikes : Table() {
   val liker = reference("liker", Users)
 }
 
-class User(id: EntityID<Int>): IntEntity(id){
+class User(id: EntityID<Int>) : IntEntity(id) {
   companion object : IntEntityClass<User>(Users)
 
   var login by Users.login
@@ -71,7 +88,7 @@ class User(id: EntityID<Int>): IntEntity(id){
   var verification by Users.verification
 }
 
-class Picture(id: EntityID<Int>): IntEntity(id) {
+class Picture(id: EntityID<Int>) : IntEntity(id) {
   companion object : IntEntityClass<Picture>(Pictures)
 
   var filename by Pictures.filename
@@ -83,6 +100,13 @@ class Picture(id: EntityID<Int>): IntEntity(id) {
   var longi by Pictures.longi
   var created by Pictures.created
   var public by Pictures.public
+
+  fun toPictureRep(): PictureRep {
+    return PictureRep(
+      id.value, owner.value, address,
+      latit, longi, created.toDate(), public
+    )
+  }
 }
 
 class Collection(id: EntityID<Int>) : IntEntity(id) {
@@ -94,12 +118,25 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
   var isRoute by Collections.isRoute
   var owner by Collections.owner
   var parent by Collections.parent
+
+  fun toCollectionRep(): CollectionRep {
+    val pics = CollectionPics
+      .select { CollectionPics.collection eq id }
+      .adjustSlice { slice(CollectionPics.picture) }
+      .map { row -> row[CollectionPics.picture].value }
+    val likes = CollectionLikes.select { CollectionLikes.liker eq id }
+    val likeNum = likes.count()
+    val liking = likes.any { row -> row[CollectionLikes.liker] == id }
+    return CollectionRep(
+      id.value, title, description, pics,
+      likeNum, liking, isRoute, parent?.value)
+  }
 }
 
 fun dbInitialize() {
   val sqliteUrl = "jdbc:sqlite:landmarks.sqlite3"
   val jdbcUrl = System.getenv("DATABASE_URL") ?: sqliteUrl
-  val cfg = HikariConfig().also { it.jdbcUrl = jdbcUrl}
+  val cfg = HikariConfig().also { it.jdbcUrl = jdbcUrl }
   val dataSource = HikariDataSource(cfg)
   Database.connect(dataSource)
 

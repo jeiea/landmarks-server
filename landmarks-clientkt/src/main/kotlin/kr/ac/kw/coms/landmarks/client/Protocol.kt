@@ -32,13 +32,14 @@ data class PictureRep(
 )
 
 data class CollectionRep(
-  val id: Int,
-  val title: String?,
-  val text: String?,
-  val images: List<Int>?,
-  val likes: Int?,
-  val liking: Boolean?,
-  val isRoute: Boolean?
+  val id: Int? = null,
+  var title: String? = null,
+  var text: String? = null,
+  var images: List<Int>? = null,
+  var likes: Int? = null,
+  var liking: Boolean? = null,
+  var isRoute: Boolean? = null,
+  var parent: Int? = null
 )
 
 /**

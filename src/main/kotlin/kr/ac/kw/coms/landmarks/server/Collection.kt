@@ -1,6 +1,7 @@
 package kr.ac.kw.coms.landmarks.server
 
 import io.ktor.application.call
+import io.ktor.http.HttpStatusCode
 import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.routing.*
@@ -13,8 +14,8 @@ import org.joda.time.DateTime
 
 fun Routing.collection() = route("/collection") {
 
-  put("/{id}") {
-    val parentId = getParamId(call)
+  put("/{id?}") {
+    val parentId = call.parameters["id"]?.toInt()
     val sessId = requireLogin().userId
     val json: CollectionRep = call.receive()
     val id = transaction {
@@ -35,7 +36,7 @@ fun Routing.collection() = route("/collection") {
     val json: CollectionRep = call.receive()
 
     transaction {
-      val col: Collection = Collection.get(colId)
+      val col: Collection = Collection.findById(colId) ?: notFoundPage()
       json.title?.also { col.title = it }
       json.text?.also { col.description = it }
       json.isRoute?.also { col.isRoute = it }
@@ -66,18 +67,9 @@ fun Routing.collection() = route("/collection") {
     requireLogin()
     val id = getParamId(call)
     val collections = transaction {
-      Collection.find { Collections.owner eq id }.map {
-        val pics = CollectionPics
-          .select { CollectionPics.collection eq it.id }
-          .adjustSlice { slice(CollectionPics.picture) }
-          .map { row -> row[CollectionPics.picture].value }
-        val likes = CollectionLikes.select { CollectionLikes.liker eq it.id }
-        val likeNum = likes.count()
-        val liking = likes.any { row -> row[CollectionLikes.liker].value == id }
-        CollectionRep(
-          it.id.value, it.title, it.description,
-          pics, likeNum, liking, it.isRoute)
-      }
+      Collection
+        .find { Collections.owner eq id }
+        .map(Collection::toCollectionRep)
     }
     call.respond(collections)
   }
