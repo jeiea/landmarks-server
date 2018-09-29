@@ -19,6 +19,7 @@ import io.ktor.sessions.set
 import kr.ac.kw.coms.landmarks.client.LoginRep
 import kr.ac.kw.coms.landmarks.client.ServerFault
 import kr.ac.kw.coms.landmarks.client.ServerOK
+import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.select
@@ -131,7 +132,8 @@ fun Route.authentication() = route("/auth") {
       throw ValidException("password incorrect")
     }
     call.sessions.set(LMSession(user.id.value))
-    call.respond(LoginRep(user.id.value, user.login, email = user.email, nick = user.nick))
+    val info = LoginRep(user.login, email = user.email, nick = user.nick)
+    call.respond(WithIntId(user.id.value, info))
   }
 }
 

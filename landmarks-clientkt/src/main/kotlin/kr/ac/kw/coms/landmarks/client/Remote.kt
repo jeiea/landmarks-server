@@ -34,7 +34,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     private const val chromeAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.59 Safari/537.36"
   }
 
-  var profile: LoginRep? = null
+  var profile: WithIntId<LoginRep>? = null
 
   suspend inline fun <reified T> request(method: HttpMethod, url: String, builder: HttpRequestBuilder.() -> Unit = {}): T {
     val response: HttpResponse = http.request {
@@ -125,7 +125,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     }
   }
 
-  suspend fun login(ident: String, pass: String): LoginRep {
+  suspend fun login(ident: String, pass: String): WithIntId<LoginRep> {
     profile = post("$basePath/auth/login") {
       json(LoginRep(login = ident, password = pass))
     }
@@ -136,7 +136,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return headersOf(HttpHeaders.ContentDisposition, "filename=$name")
   }
 
-  suspend fun uploadPicture(meta: PictureRep, file: File): PictureRep {
+  suspend fun uploadPicture(meta: PictureRep, file: File): WithIntId<PictureRep> {
     val content = MultiPartContent.build {
       meta.lat?.also { add("lat", it.toString()) }
       meta.lon?.also { add("lon", it.toString()) }
@@ -150,12 +150,14 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     }
   }
 
-  suspend fun getRandomProblems(n: Int): List<PictureRep> {
+  suspend fun getRandomProblems(n: Int): List<WithIntId<PictureRep>> {
     return get("$basePath/problem/random/$n")
   }
 
-  suspend fun modifyPicture(info: PictureRep): PictureRep {
-    return post("$basePath/picture/${info.id}")
+  suspend fun modifyPicture(id: Int, info: PictureRep) {
+    return post("$basePath/picture/${id}") {
+      json(info)
+    }
   }
 
   suspend fun getPictureInfo(id: Int): PictureRep {
@@ -170,16 +172,16 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return get("$basePath/picture/$id")
   }
 
-  suspend fun getPictureInfos(userId: Int): List<PictureRep> {
+  suspend fun getPictureInfos(userId: Int): List<WithIntId<PictureRep>> {
     return get("$basePath/picture/user/$userId")
   }
 
-  suspend fun getMyPictureInfos(): List<PictureRep> {
-    return getPictureInfos(profile!!.id!!)
+  suspend fun getMyPictureInfos(): List<WithIntId<PictureRep>> {
+    return getPictureInfos(profile!!.id)
   }
 
 
-  suspend fun uploadCollection(collection: CollectionRep): CollectionRep {
+  suspend fun uploadCollection(collection: CollectionRep): WithIntId<CollectionRep> {
     return put("$basePath/collection") {
       json(collection)
     }
@@ -190,11 +192,11 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
   }
 
   suspend fun getMyCollections(): List<CollectionRep> {
-    return getCollections(profile!!.id!!)
+    return getCollections(profile!!.id)
   }
 
-  suspend fun modifyCollection(collection: CollectionRep): CollectionRep {
-    return post("$basePath/collection/${collection.id}") {
+  suspend fun modifyCollection(id: Int, collection: CollectionRep) {
+    return post("$basePath/collection/${id}") {
       json(collection)
     }
   }

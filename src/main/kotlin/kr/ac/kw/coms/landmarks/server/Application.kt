@@ -1,7 +1,5 @@
 package kr.ac.kw.coms.landmarks.server
 
-import com.beust.klaxon.JsonArray
-import com.beust.klaxon.JsonObject
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.gson.gson
@@ -15,6 +13,7 @@ import io.ktor.server.netty.Netty
 import io.ktor.sessions.*
 import kr.ac.kw.coms.landmarks.client.PictureRep
 import kr.ac.kw.coms.landmarks.client.ServerFault
+import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.sql.Random
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -104,10 +103,10 @@ fun Route.problem() = route("/problem") {
 
   get("/random/{n}") { _ ->
     val n: Int = call.parameters["n"]?.toIntOrNull() ?: 1
-    val pics: List<PictureRep> = transaction {
+    val pics: List<WithIntId<PictureRep>> = transaction {
       Pictures
         .selectAll().orderBy(Random()).limit(n)
-        .map(Pictures::toPictureRep)
+        .map(Pictures::toIdPicture)
     }
     call.respond(pics)
   }

@@ -61,29 +61,29 @@ class RemoteMultiSpek : Spek({
   }
 
   val validUsers = listOf(
-    LoginRep(-1, "login", "password", "email", "nick"),
-    LoginRep(-1, "user01", "fight!", "some@a.com", "헐크"),
-    LoginRep(-1, "user02", "비밀번호한글?", "some@b.com", "냥냥"),
-    LoginRep(-1, "user03", "fight!", "some@c.com", "음..")
+    LoginRep("login", "password", "email", "nick"),
+    LoginRep("user01", "fight!", "some@a.com", "헐크"),
+    LoginRep("user02", "비밀번호한글?", "some@b.com", "냥냥"),
+    LoginRep("user03", "fight!", "some@c.com", "음..")
   )
 
   val invalidUsers = listOf(
     // a field empty
-    LoginRep(-1, "", "fight!", "some@d.com", "헐크"),
-    LoginRep(-1, "user04", "", "some@d.com", "헐크"),
-    LoginRep(-1, "user05", "fight!", "", "헐크"),
-    LoginRep(-1, "user06", "fight!", "some@d.com", ""),
+    LoginRep("", "fight!", "some@d.com", "헐크"),
+    LoginRep("user04", "", "some@d.com", "헐크"),
+    LoginRep("user05", "fight!", "", "헐크"),
+    LoginRep("user06", "fight!", "some@d.com", ""),
 
     // a field null
-    LoginRep(-1, "", "fight!", "some@e.com", "헐크"),
-    LoginRep(-1, "user04", "", "some@f.com", "헐크"),
-    LoginRep(-1, "user05", "fight!", "", "헐크"),
-    LoginRep(-1, "user06", "fight!", "some@g.com", ""),
+    LoginRep("", "fight!", "some@e.com", "헐크"),
+    LoginRep("user04", "", "some@f.com", "헐크"),
+    LoginRep("user05", "fight!", "", "헐크"),
+    LoginRep("user06", "fight!", "some@g.com", ""),
 
     // duplicate fields
-    LoginRep(-1, "user01", "fight!", "some@e.com", "ahh"),
-    LoginRep(-1, "user07", "fight!", "some@a.com", "grr"),
-    LoginRep(-1, "user08", "fight!", "some@h.com", "nick")
+    LoginRep("user01", "fight!", "some@e.com", "ahh"),
+    LoginRep("user07", "fight!", "some@a.com", "grr"),
+    LoginRep("user08", "fight!", "some@h.com", "nick")
   )
 
   val clients = mutableListOf<Remote>()
@@ -98,7 +98,7 @@ class RemoteMultiSpek : Spek({
     blit("login as valid users") {
       validUsers.forEach { rep ->
         val cl = newClient()
-        val profile = cl.login(rep.login!!, rep.password!!)
+        val profile = cl.login(rep.login!!, rep.password!!).value
         profile.login!! `should be equal to` rep.login!!
         profile.email!! `should be equal to` rep.email!!
         profile.nick!! `should be equal to` rep.nick!!
@@ -122,9 +122,8 @@ class RemoteMultiSpek : Spek({
     val tsv: String = File("../data/archive1/catalog.tsv").readText()
     val catalog = tsv.split('\n').map { it.split('\t') }
 
-    val pics = mutableListOf<PictureRep>()
+    val pics = mutableListOf<WithIntId<PictureRep>>()
     blit("uploads picture") {
-
       for (i in 0..3) {
         val gps = i.toFloat()
         val meta = PictureRep(lat = gps, lon = gps, address = "address$i")

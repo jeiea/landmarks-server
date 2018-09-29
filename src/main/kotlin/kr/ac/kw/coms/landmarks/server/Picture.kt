@@ -2,14 +2,12 @@ package kr.ac.kw.coms.landmarks.server
 
 import com.drew.imaging.ImageMetadataReader
 import com.drew.metadata.exif.GpsDirectory
-import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.MultiPartData
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
 import io.ktor.http.content.streamProvider
-import io.ktor.pipeline.PipelineContext
 import io.ktor.request.receiveMultipart
 import io.ktor.response.respond
 import io.ktor.response.respondBytes
@@ -19,6 +17,7 @@ import io.ktor.routing.put
 import io.ktor.routing.route
 import kotlinx.coroutines.experimental.runBlocking
 import kr.ac.kw.coms.landmarks.client.PictureRep
+import kr.ac.kw.coms.landmarks.client.WithIntId
 import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
@@ -38,17 +37,17 @@ fun Routing.picture() = route("/picture") {
     val pic: Picture = transaction {
       insertPicture(parts, sess)
     }
-    call.respond(pic.toPictureRep())
+    call.respond(pic.toIdPicture())
   }
 
   get("/user/{id}") { _ ->
-    val ar = arrayListOf<PictureRep>()
+    val ar = mutableListOf<WithIntId<PictureRep>>()
     val calleeId: Int = getParamId(call)
     val callerId: Int = requireLogin().userId
     ar.addAll(transaction {
       Picture.find {
         isGrantedTo(callerId) and (Pictures.owner eq calleeId)
-      }.map(Picture::toPictureRep)
+      }.map(Picture::toIdPicture)
     })
     call.respond(ar)
   }
@@ -67,12 +66,12 @@ fun Routing.picture() = route("/picture") {
   get("/{id}/info") { _ ->
     val id: Int = getParamId(call)
     val userId: Int = requireLogin().userId
-    val pic: PictureRep? = transaction {
+    val pic: WithIntId<PictureRep>? = transaction {
       Picture.find {
         isGrantedTo(userId) and (Pictures.id eq id)
-      }.firstOrNull()?.toPictureRep()
+      }.firstOrNull()?.toIdPicture()
     }
-    if (pic == null || pic.owner != userId && !pic.isPublic) {
+    if (pic == null || pic.value.run { owner != userId && isPublic }) {
       call.respond(HttpStatusCode.NotFound)
     } else {
       call.respond(pic)
@@ -99,6 +98,7 @@ fun SqlExpressionBuilder.isGrantedTo(userId: Int): Op<Boolean> {
 fun insertPicture(parts: MultiPartData, sess: LMSession): Picture {
   return Picture.new {
     owner = EntityID(sess.userId, Users)
+    public = true
     runBlocking {
       parts.forEachPart(assemblePicture(this@new, sess.userId))
     }

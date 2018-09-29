@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import kr.ac.kw.coms.landmarks.client.CollectionRep
 import kr.ac.kw.coms.landmarks.client.PictureRep
+import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
@@ -38,15 +39,16 @@ object Pictures : IntIdTable() {
   val created = datetime("created")
   val public = bool("public")
 
-  fun toPictureRep(row: ResultRow): PictureRep {
-    return PictureRep(
-      row[Pictures.id].value,
+  fun toIdPicture(row: ResultRow): WithIntId<PictureRep> {
+    val pic = PictureRep(
       row[Pictures.owner].value,
       row[Pictures.address],
       row[Pictures.latit],
       row[Pictures.longi],
       row[Pictures.created].toDate(),
-      row[Pictures.public])
+      row[Pictures.public]
+    )
+    return WithIntId(row[Pictures.id].value, pic)
   }
 }
 
@@ -100,11 +102,12 @@ class Picture(id: EntityID<Int>) : IntEntity(id) {
   var created by Pictures.created
   var public by Pictures.public
 
-  fun toPictureRep(): PictureRep {
-    return PictureRep(
-      id.value, owner.value, address,
+  fun toIdPicture(): WithIntId<PictureRep> {
+    val pic = PictureRep(
+      owner.value, address,
       latit, longi, created.toDate(), public
     )
+    return WithIntId(id.value, pic)
   }
 }
 
@@ -118,7 +121,7 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
   var owner by Collections.owner
   var parent by Collections.parent
 
-  fun toCollectionRep(): CollectionRep {
+  fun toIdCollection(): WithIntId<CollectionRep> {
     val pics = CollectionPics
       .select { CollectionPics.collection eq id }
       .adjustSlice { slice(CollectionPics.picture) }
@@ -126,9 +129,10 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
     val likes = CollectionLikes.select { CollectionLikes.liker eq id }
     val likeNum = likes.count()
     val liking = likes.any { row -> row[CollectionLikes.liker] == id }
-    return CollectionRep(
-      id.value, title, description, pics,
-      likeNum, liking, isRoute, parent?.value)
+    val collection = CollectionRep(
+      title, description, pics, likeNum, liking,
+      isRoute, parent?.value)
+    return WithIntId(id.value, collection)
   }
 }
 

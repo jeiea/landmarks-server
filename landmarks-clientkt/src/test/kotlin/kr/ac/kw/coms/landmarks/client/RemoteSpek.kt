@@ -49,18 +49,19 @@ class RemoteSpek : Spek({
 
     var profile: LoginRep? = null
     blit("does login") {
-      val p = client.login(ident, "pasowo")
+      val p = client.login(ident, "pasowo").value
       p.login!! `should be equal to` ident
       p.email!! `should be equal to` email
       p.nick!! `should be equal to` ident
       profile = p
     }
 
-    val pics = mutableListOf<PictureRep>()
+    val pics = mutableListOf<WithIntId<PictureRep>>()
     blit("uploads picture") {
       for (i in 0..3) {
         val gps = i.toFloat()
-        val pic = client.uploadPicture(File("../data/coord$i.jpg"), gps, gps, "address$i")
+        val info = PictureRep(lat = gps, lon = gps, address = "address$i")
+        val pic = client.uploadPicture(info, File("../data/coord$i.jpg"))
         pics.add(pic)
       }
     }
@@ -69,10 +70,10 @@ class RemoteSpek : Spek({
       client.getPicture(pics[0].id).readBytes().size `should be greater than` 0
     }
 
-    var replaced: PictureRep = PictureRep(0)
+    var replaced = PictureRep()
     blit("modify picture info") {
-      replaced = pics[0].copy(address = "Manhatan?", lat = 110.0f, lon = 20.0f)
-      client.modifyPicture(replaced)
+      replaced = pics[0].value.copy(address = "Manhatan?", lat = 110.0f, lon = 20.0f)
+      client.modifyPicture(pics[0].id, replaced)
     }
 
     blit("receive picture info") {
@@ -88,9 +89,9 @@ class RemoteSpek : Spek({
     }
 
     blit("receives quiz info") {
-      val quizs: ArrayList<PictureRep> = arrayListOf()
+      val quizs = mutableListOf<WithIntId<PictureRep>>()
       quizs.addAll(client.getRandomProblems(2))
-      quizs[0].id!! `should not be equal to` quizs[1].id!!
+      quizs[0].id `should not be equal to` quizs[1].id
     }
 
     // Deletion of picture is not yet implemented.
@@ -99,13 +100,14 @@ class RemoteSpek : Spek({
       title = "first diary",
       text = "just first"
     )
+    var realCollection: WithIntId<CollectionRep>? = null
     blit("upload collections") {
-      client.uploadCollection(collection)
+      realCollection = client.uploadCollection(collection)
     }
 
     blit("modify collections") {
       collection.images = pics.map { it.id }.toList()
-      client.modifyCollection(collection)
+      client.modifyCollection(realCollection!!.id, collection)
     }
 
     blit("query my collections") {

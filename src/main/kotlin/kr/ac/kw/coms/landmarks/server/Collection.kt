@@ -1,7 +1,6 @@
 package kr.ac.kw.coms.landmarks.server
 
 import io.ktor.application.call
-import io.ktor.http.HttpStatusCode
 import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.routing.*
@@ -69,7 +68,7 @@ fun Routing.collection() = route("/collection") {
     val collections = transaction {
       Collection
         .find { Collections.owner eq id }
-        .map(Collection::toCollectionRep)
+        .map(Collection::toIdCollection)
     }
     call.respond(collections)
   }
