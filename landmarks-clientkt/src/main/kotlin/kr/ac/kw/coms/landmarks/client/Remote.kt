@@ -16,6 +16,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.experimental.channels.ArrayChannel
 import kotlinx.coroutines.experimental.channels.sendBlocking
 import kotlinx.coroutines.experimental.delay
+import kotlinx.coroutines.experimental.io.jvm.javaio.toOutputStream
 import kotlinx.io.InputStream
 import kotlinx.io.core.writeFully
 import java.io.File
@@ -135,17 +136,17 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return headersOf(HttpHeaders.ContentDisposition, "filename=$name")
   }
 
-  suspend fun uploadPicture(file: File, latitude: Float? = null, longitude: Float? = null, addr: String? = null): PictureRep {
-    val filename: String = URLEncoder.encode(file.name, "UTF-8")
+  suspend fun uploadPicture(meta: PictureRep, file: File): PictureRep {
+    val content = MultiPartContent.build {
+      meta.lat?.also { add("lat", it.toString()) }
+      meta.lon?.also { add("lon", it.toString()) }
+      meta.address?.also { add("address", it) }
+      add("pic0", filename = file.name) {
+        file.inputStream().copyToSuspend(toOutputStream())
+      }
+    }
     return put("$basePath/picture") {
-      body = MultiPartFormDataContent(formData {
-        latitude?.also { append("lat", it.toString()) }
-        longitude?.also { append("lon", it.toString()) }
-        addr?.also { append("address", it) }
-        append("pic0", filenameHeader(filename)) {
-          writeFully(file.readBytes())
-        }
-      })
+      body = content
     }
   }
 

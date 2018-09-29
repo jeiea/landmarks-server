@@ -1,6 +1,5 @@
 package kr.ac.kw.coms.landmarks.server
 
-import com.beust.klaxon.JsonObject
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import kr.ac.kw.coms.landmarks.client.CollectionRep

@@ -90,7 +90,7 @@ class RemoteSpek : Spek({
     blit("receives quiz info") {
       val quizs: ArrayList<PictureRep> = arrayListOf()
       quizs.addAll(client.getRandomProblems(2))
-      quizs[0].id `should not be equal to` quizs[1].id
+      quizs[0].id!! `should not be equal to` quizs[1].id!!
     }
 
     // Deletion of picture is not yet implemented.

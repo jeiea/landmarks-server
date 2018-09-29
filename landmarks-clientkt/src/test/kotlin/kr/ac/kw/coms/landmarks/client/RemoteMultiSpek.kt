@@ -23,7 +23,8 @@ class RemoteMultiSpek : Spek({
       client.resetAllDatabase()
       client.register("", "", "a@b.c", "")
       client.login("", "")
-      client.uploadPicture(File("../data/archive1/도쿄_.jpg"), 0f, 0f, "")
+      val meta = PictureRep(lat = 0f, lon = 0f, address = "")
+      client.uploadPicture(meta, File("../data/archive1/도쿄_.jpg"))
     }
 
     xblit("resets server and uploads sample problems") {
@@ -36,7 +37,8 @@ class RemoteMultiSpek : Spek({
       for (picture: List<String> in meta) {
         val file: File = archive.resolve(picture[0])
         val addr = file.nameWithoutExtension.replace('_', ' ')
-        client.uploadPicture(file, 0f, 0f, addr)
+        val info = PictureRep(lat = 0f, lon = 0f, address = addr)
+        client.uploadPicture(info, file)
       }
     }
   }
@@ -125,7 +127,8 @@ class RemoteMultiSpek : Spek({
 
       for (i in 0..3) {
         val gps = i.toFloat()
-        val pic = client.uploadPicture(File("../data/coord$i.jpg"), gps, gps, "address$i")
+        val meta = PictureRep(lat = gps, lon = gps, address = "address$i")
+        val pic = client.uploadPicture(meta, File("../data/coord$i.jpg"))
         pics.add(pic)
       }
     }

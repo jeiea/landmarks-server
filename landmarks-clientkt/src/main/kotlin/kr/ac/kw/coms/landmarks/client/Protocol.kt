@@ -2,7 +2,6 @@ package kr.ac.kw.coms.landmarks.client
 
 import com.beust.klaxon.Json
 import com.beust.klaxon.JsonObject
-import com.beust.klaxon.Parser
 import com.beust.klaxon.internal.firstNotNullResult
 import java.util.*
 
@@ -13,6 +12,8 @@ data class ServerFault(
 
 data class ServerOK(val msg: String)
 
+data class IdEntity<T>(val id: Int, val entity: T)
+
 data class LoginRep(
   val id: Int? = null,
   val login: String? = null,
@@ -22,7 +23,7 @@ data class LoginRep(
 )
 
 data class PictureRep(
-  val id: Int,
+  val id: Int? = null,
   val owner: Int? = null,
   val address: String? = null,
   val lat: Float? = null,
