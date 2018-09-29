@@ -154,6 +154,9 @@ fun createTables() {
   transaction {
     create(Users)
     create(Pictures)
+    create(Collections)
+    create(CollectionPics)
+    create(CollectionLikes)
 
     if (User.find { Users.nick eq "admin" }.count() < 1) {
       User.new {
@@ -171,6 +174,9 @@ fun dropTables() {
   transaction {
     drop(Users)
     drop(Pictures)
+    drop(Collections)
+    drop(CollectionPics)
+    drop(CollectionLikes)
   }
 }
 

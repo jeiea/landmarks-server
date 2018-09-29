@@ -73,7 +73,7 @@ class RemoteSpek : Spek({
     var replaced = PictureRep()
     blit("modify picture info") {
       replaced = pics[0].value.copy(address = "Manhatan?", lat = 110.0f, lon = 20.0f)
-      client.modifyPicture(pics[0].id, replaced)
+      client.modifyPictureInfo(pics[0].id, replaced)
     }
 
     blit("receive picture info") {
@@ -85,7 +85,7 @@ class RemoteSpek : Spek({
     }
 
     blit("query my pictures") {
-      client.getMyPictureInfos().size `should be equal to` 3
+      client.getMyPictureInfos().size `should be equal to` 4
     }
 
     blit("receives quiz info") {
@@ -113,7 +113,7 @@ class RemoteSpek : Spek({
     blit("query my collections") {
       val queried = client.getMyCollections()
       queried.size `should be equal to` 1
-      collection.images!! `should equal` queried[0].images!!
+      collection.images!! `should equal` queried[0].value.images!!
     }
 
     // Deletion of collection is not yet implemented

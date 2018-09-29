@@ -154,14 +154,14 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return get("$basePath/problem/random/$n")
   }
 
-  suspend fun modifyPicture(id: Int, info: PictureRep) {
-    return post("$basePath/picture/${id}") {
+  suspend fun modifyPictureInfo(id: Int, info: PictureRep) {
+    return post("$basePath/picture/info/${id}") {
       json(info)
     }
   }
 
   suspend fun getPictureInfo(id: Int): PictureRep {
-    return get("$basePath/picture/$id/info")
+    return get("$basePath/picture/info/$id")
   }
 
   suspend fun deletePicture(id: Int) {
@@ -172,11 +172,11 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return get("$basePath/picture/$id")
   }
 
-  suspend fun getPictureInfos(userId: Int): List<WithIntId<PictureRep>> {
+  suspend fun getPictureInfos(userId: Int): MutableList<WithIntId<PictureRep>> {
     return get("$basePath/picture/user/$userId")
   }
 
-  suspend fun getMyPictureInfos(): List<WithIntId<PictureRep>> {
+  suspend fun getMyPictureInfos(): MutableList<WithIntId<PictureRep>> {
     return getPictureInfos(profile!!.id)
   }
 
@@ -187,11 +187,11 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     }
   }
 
-  suspend fun getCollections(ownerId: Int): List<CollectionRep> {
+  suspend fun getCollections(ownerId: Int): MutableList<WithIntId<CollectionRep>> {
     return get("$basePath/collection/user/$ownerId")
   }
 
-  suspend fun getMyCollections(): List<CollectionRep> {
+  suspend fun getMyCollections(): MutableList<WithIntId<CollectionRep>> {
     return getCollections(profile!!.id)
   }
 

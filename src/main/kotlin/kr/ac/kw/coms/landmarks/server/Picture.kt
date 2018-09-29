@@ -8,20 +8,21 @@ import io.ktor.http.content.MultiPartData
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
 import io.ktor.http.content.streamProvider
+import io.ktor.request.receive
 import io.ktor.request.receiveMultipart
 import io.ktor.response.respond
 import io.ktor.response.respondBytes
-import io.ktor.routing.Routing
-import io.ktor.routing.get
-import io.ktor.routing.put
-import io.ktor.routing.route
+import io.ktor.routing.*
 import kotlinx.coroutines.experimental.runBlocking
 import kr.ac.kw.coms.landmarks.client.PictureRep
 import kr.ac.kw.coms.landmarks.client.WithIntId
 import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.SqlExpressionBuilder
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 import java.io.ByteArrayInputStream
@@ -57,13 +58,13 @@ fun Routing.picture() = route("/picture") {
     val userId: Int = requireLogin().userId
     val bytes = transaction {
       val p = Picture.find { isGrantedTo(userId) and (Pictures.id eq id) }.firstOrNull()
-        p ?: notFoundPage()
+      p ?: notFoundPage()
       p.file.binaryStream.readBytes()
     }
     call.respondBytes(bytes)
   }
 
-  get("/{id}/info") { _ ->
+  get("/info/{id}") { _ ->
     val id: Int = getParamId(call)
     val userId: Int = requireLogin().userId
     val pic: WithIntId<PictureRep>? = transaction {
@@ -74,7 +75,28 @@ fun Routing.picture() = route("/picture") {
     if (pic == null || pic.value.run { owner != userId && isPublic }) {
       call.respond(HttpStatusCode.NotFound)
     } else {
-      call.respond(pic)
+      call.respond(pic.value)
+    }
+  }
+
+  post("/info/{id}") { _ ->
+    val id: Int = getParamId(call)
+    val userId: Int = requireLogin().userId
+    val info: PictureRep = call.receive()
+    val pic: WithIntId<PictureRep>? = transaction {
+      val pic = Picture.find {
+        isGrantedTo(userId) and (Pictures.id eq id)
+      }.firstOrNull() ?: notFoundPage()
+      pic.address = info.address
+      pic.latit = info.lat
+      pic.longi = info.lon
+      pic.public = info.isPublic
+      pic.toIdPicture()
+    }
+    if (pic == null || pic.value.run { owner != userId && isPublic }) {
+      call.respond(HttpStatusCode.NotFound)
+    } else {
+      call.respond(pic.value)
     }
   }
 

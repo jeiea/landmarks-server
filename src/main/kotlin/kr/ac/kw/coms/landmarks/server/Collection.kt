@@ -13,20 +13,21 @@ import org.joda.time.DateTime
 
 fun Routing.collection() = route("/collection") {
 
-  put("/{id?}") {
+  put("/{id?}") { _ ->
     val parentId = call.parameters["id"]?.toInt()
     val sessId = requireLogin().userId
     val json: CollectionRep = call.receive()
-    val id = transaction {
+    val collection = transaction {
       Collection.new {
         created = DateTime.now()
         title = json.title ?: ""
+        description = json.text ?: ""
         isRoute = json.isRoute ?: false
         owner = EntityID(sessId, Users)
-        parent = EntityID(parentId, Collections)
-      }.id.value
+        parent = parentId?.let { EntityID(it, Collections) }
+      }.toIdCollection()
     }
-    call.respond(id)
+    call.respond(collection)
   }
 
   post("/{id}") { _ ->
@@ -34,7 +35,7 @@ fun Routing.collection() = route("/collection") {
     val colId: EntityID<Int> = EntityID(getParamId(call), Collections)
     val json: CollectionRep = call.receive()
 
-    transaction {
+    val collection = transaction {
       val col: Collection = Collection.findById(colId) ?: notFoundPage()
       json.title?.also { col.title = it }
       json.text?.also { col.description = it }
@@ -57,9 +58,9 @@ fun Routing.collection() = route("/collection") {
           }
         }
       }
-      Unit
+      col.toIdCollection()
     }
-    call.respond(ServerOK("update success"))
+    call.respond(collection)
   }
 
   get("/user/{id}") { _ ->
