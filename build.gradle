@@ -55,7 +55,7 @@ dependencies {
     implementation "io.ktor:ktor-gson:$ktor_version"
 
     // Kotlin ORM
-    implementation 'org.jetbrains.exposed:exposed:0.10.4'
+    implementation 'org.jetbrains.exposed:exposed:0.10.5'
     implementation 'joda-time:joda-time:2.10'
     // Fast connection pool for performance
     implementation 'com.zaxxer:HikariCP:2.6.0'
