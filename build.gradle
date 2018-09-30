@@ -62,7 +62,7 @@ dependencies {
     // SQLite JDBC Driver
     implementation 'org.xerial:sqlite-jdbc:3.23.1'
     // Postgresql JDBC Driver
-    implementation 'org.postgresql:postgresql:42.2.2'
+    implementation 'org.postgresql:postgresql:42.2.5'
 
     // Thumbnail
     implementation 'net.coobird:thumbnailator:0.4.8'
