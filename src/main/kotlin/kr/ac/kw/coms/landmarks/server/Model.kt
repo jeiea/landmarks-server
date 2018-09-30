@@ -137,15 +137,23 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
 }
 
 fun dbInitialize() {
-  val sqliteUrl = "jdbc:sqlite:landmarks.sqlite3"
-  val jdbcUrl = System.getenv("JDBC_DATABASE_URL") ?: sqliteUrl
-  val cfg = HikariConfig().also { it.jdbcUrl = jdbcUrl }
+  val cfg = HikariConfig()
+  val pgJdbcUrl = System.getenv("JDBC_DATABASE_URL")
+  if (pgJdbcUrl != null) {
+    cfg.driverClassName = "org.postgresql.Driver"
+    cfg.jdbcUrl = pgJdbcUrl
+  }
+  else {
+    cfg.jdbcUrl = "jdbc:sqlite:landmarks.sqlite3"
+  }
+
   val dataSource = HikariDataSource(cfg)
   Database.connect(dataSource)
 
   // If don't do this, exception occurs with SQLite
-  if (jdbcUrl == sqliteUrl)
+  if (pgJdbcUrl == null) {
     TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
+  }
 
   createTables()
 }
