@@ -180,11 +180,11 @@ fun createTables() {
 
 fun dropTables() {
   transaction {
-    drop(Users)
-    drop(Pictures)
-    drop(Collections)
-    drop(CollectionPics)
     drop(CollectionLikes)
+    drop(CollectionPics)
+    drop(Collections)
+    drop(Pictures)
+    drop(Users)
   }
 }
 

@@ -24,7 +24,8 @@ import java.util.*
 @RunWith(JUnitPlatform::class)
 class RemoteSpek : Spek({
   describe("landmarks server single user") {
-    val client = Remote(getTestClient(), "http://localhost:8080")
+    val client = Remote(getTestClient(), "https://landmarks-coms.herokuapp.com/")
+//    val client = Remote(getTestClient(), "http://localhost:8080")
 
     xblit("does reverse geocoding") {
       val res: ReverseGeocodeResult = client.reverseGeocode(37.54567, 126.9944)
