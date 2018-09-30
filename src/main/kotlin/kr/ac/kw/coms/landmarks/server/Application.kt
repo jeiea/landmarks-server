@@ -53,7 +53,10 @@ fun Application.landmarksServer() {
     }
   }
   install(Sessions) {
-    cookie<LMSession>("SESSION", storage = SessionStorageMemory())
+    cookie<LMSession>("SESSION", SessionStorageMemory()) {
+      cookie.path = "/"
+      cookie.httpOnly = true
+    }
   }
   install(ContentNegotiation) {
     gson { }

@@ -54,7 +54,7 @@ fun Route.authentication() = route("/auth") {
   post("/register") {
     val reg: LoginRep = call.receive()
     fun throwIfMissing(name: String, field: String?) {
-      if (field == null) {
+      if (field.isNullOrBlank()) {
         throw ValidException("${name} field not found")
       }
     }

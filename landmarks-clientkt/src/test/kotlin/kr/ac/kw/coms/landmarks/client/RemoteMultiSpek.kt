@@ -1,7 +1,9 @@
 package kr.ac.kw.coms.landmarks.client
 
+import kotlinx.coroutines.experimental.runBlocking
 import org.amshove.kluent.`should be equal to`
 import org.amshove.kluent.`should be true`
+import org.amshove.kluent.`should throw`
 import org.jetbrains.spek.api.Spek
 import org.jetbrains.spek.api.dsl.describe
 import org.junit.platform.runner.JUnitPlatform
@@ -16,49 +18,6 @@ class RemoteMultiSpek : Spek({
   }
 
   val client = newClient()
-  describe("makes server testable") {
-    val client = Remote(getTestClient(), "http://localhost:8080")
-
-    blit("resets server and uploads small sample problems") {
-      client.resetAllDatabase()
-      client.register("", "", "a@b.c", "")
-      client.login("", "")
-      val meta = PictureRep(lat = 0f, lon = 0f, address = "")
-      client.uploadPicture(meta, File("../data/archive1/도쿄_.jpg"))
-    }
-
-    xblit("resets server and uploads sample problems") {
-      client.resetAllDatabase()
-      client.register("", "", "a@b.c", "")
-      client.login("", "")
-      val archive = File("../data/archive1")
-      val catalog = archive.resolve("catalog.tsv").readText()
-      val meta: List<List<String>> = catalog.split('\n').map { it.split('\t') }
-      for (picture: List<String> in meta) {
-        val file: File = archive.resolve(picture[0])
-        val addr = file.nameWithoutExtension.replace('_', ' ')
-        val info = PictureRep(lat = 0f, lon = 0f, address = addr)
-        client.uploadPicture(info, file)
-      }
-    }
-  }
-
-  describe("client can do some query") {
-    xblit("does reverse geocoding") {
-      val res: ReverseGeocodeResult = client.reverseGeocode(37.54567, 126.9944)
-      res.country!! `should be equal to` "대한민국"
-      res.detail!! `should be equal to` "서울특별시"
-    }
-
-    blit("checks server health") {
-      client.checkAlive().`should be true`()
-    }
-
-    // for test!!!!
-    blit("reset all DB") {
-      client.resetAllDatabase()
-    }
-  }
 
   val validUsers = listOf(
     LoginRep("login", "password", "email", "nick"),
@@ -89,6 +48,13 @@ class RemoteMultiSpek : Spek({
   val clients = mutableListOf<Remote>()
 
   describe("client can register only if valid") {
+    beforeGroup {
+      runBlocking {
+        client.checkAlive().`should be true`()
+        client.resetAllDatabase()
+      }
+    }
+
     blit("registers valid users") {
       validUsers.forEach { rep ->
         client.register(rep.login!!, rep.password!!, rep.email!!, rep.nick!!)
@@ -108,29 +74,41 @@ class RemoteMultiSpek : Spek({
 
     blit("detects registration failure") {
       invalidUsers.forEach { rep ->
-        try {
-          client.register(rep.login!!, rep.password!!, rep.email!!, rep.nick!!)
-          assert(false)
-        } catch (e: ServerFault) {
-          // server throws expected error
-        }
+        {
+          runBlocking {
+            val x = client.register(rep.login!!, rep.password!!, rep.email!!, rep.nick!!)
+            throw RuntimeException(x.toString())
+          }
+        } `should throw` ServerFault::class
       }
     }
   }
 
-  describe("test uploading pictures") {
-    val tsv: String = File("../data/archive1/catalog.tsv").readText()
-    val catalog = tsv.split('\n').map { it.split('\t') }
-
-    val pics = mutableListOf<WithIntId<PictureRep>>()
-    blit("uploads picture") {
-      for (i in 0..3) {
-        val gps = i.toFloat()
-        val meta = PictureRep(lat = gps, lon = gps, address = "address$i")
-        val pic = client.uploadPicture(meta, File("../data/coord$i.jpg"))
-        pics.add(pic)
+  describe("test picture features with multiple users") {
+    blit("uploads pictures") {
+      val archive = File("../data/archive1")
+      val catalog = archive.resolve("catalog.tsv").readText()
+      val meta: List<List<String>> = catalog.split('\n').map { it.split('\t') }
+      var idx = 0
+      for (vs: List<String> in meta) {
+        val file: File = archive.resolve(vs[0])
+        val lat = vs[1].toFloat()
+        val lon = vs[2].toFloat()
+        val addr = file.nameWithoutExtension.replace('_', ' ')
+        val info = PictureRep(lat = lat, lon = lon, address = addr)
+        clients[idx % clients.size].uploadPicture(info, file)
+        idx++
       }
     }
 
+    val userPics = mutableListOf<MutableList<WithIntId<PictureRep>>>()
+    blit("test valid access") {
+      clients.forEach {
+        val pics = it.getMyPictureInfos()
+        pics.size `should be equal to` 5
+        userPics.add(pics)
+      }
+    }
   }
+
 })
