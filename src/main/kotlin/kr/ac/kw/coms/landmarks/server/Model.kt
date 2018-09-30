@@ -138,7 +138,7 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
 
 fun dbInitialize() {
   val sqliteUrl = "jdbc:sqlite:landmarks.sqlite3"
-  val jdbcUrl = System.getenv("DATABASE_URL") ?: sqliteUrl
+  val jdbcUrl = System.getenv("JDBC_DATABASE_URL") ?: sqliteUrl
   val cfg = HikariConfig().also { it.jdbcUrl = jdbcUrl }
   val dataSource = HikariDataSource(cfg)
   Database.connect(dataSource)
