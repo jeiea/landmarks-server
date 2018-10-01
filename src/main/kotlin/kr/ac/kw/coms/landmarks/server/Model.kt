@@ -9,12 +9,9 @@ import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.SchemaUtils.drop
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.sql.Connection
@@ -122,16 +119,16 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
   var parent by Collections.parent
 
   fun toIdCollection(): WithIntId<CollectionRep> {
-    val pics = CollectionPics
-      .select { CollectionPics.collection eq id }
-      .adjustSlice { slice(CollectionPics.picture) }
-      .map { row -> row[CollectionPics.picture].value }
+    val pics = (CollectionPics innerJoin Pictures)
+      .select { CollectionPics.picture eq Pictures.id }
+      .andWhere { CollectionPics.collection eq id }
+      .map(Pictures::toIdPicture)
     val likes = CollectionLikes.select { CollectionLikes.liker eq id }
     val likeNum = likes.count()
     val liking = likes.any { row -> row[CollectionLikes.liker] == id }
     val collection = CollectionRep(
-      title, description, pics, likeNum, liking,
-      isRoute, parent?.value)
+      title, description, pics.map { it.id }, pics,
+      likeNum, liking, isRoute, parent?.value)
     return WithIntId(id.value, collection)
   }
 }
@@ -142,8 +139,7 @@ fun dbInitialize() {
   if (pgJdbcUrl != null) {
     cfg.driverClassName = "org.postgresql.Driver"
     cfg.jdbcUrl = pgJdbcUrl
-  }
-  else {
+  } else {
     cfg.jdbcUrl = "jdbc:sqlite:landmarks.sqlite3"
   }
 

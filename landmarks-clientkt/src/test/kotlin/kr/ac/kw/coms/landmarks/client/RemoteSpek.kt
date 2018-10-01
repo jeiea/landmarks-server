@@ -118,9 +118,13 @@ class RemoteSpek : Spek({
     var createdCollId = 0
     blit("query my collections") {
       val queried = client.getMyCollections()
-      createdCollId = queried[0].id
       queried.size `should be equal to` 1
-      collection.images!! `should equal` queried[0].value.images!!
+
+      val collGot: CollectionRep = queried[0].value
+      collGot.images!! `should equal` collection.images!!
+      collGot.previews!!.size `should be equal to`  collection.images!!.size
+
+      createdCollId = queried[0].id
     }
 
     blit("query collection picture info") {

@@ -20,14 +20,21 @@ fun Routing.collection() = route("/collection") {
     val sessId = requireLogin().userId
     val json: CollectionRep = call.receive()
     val collection = transaction {
-      Collection.new {
+      val coll = Collection.new {
         created = DateTime.now()
         title = json.title ?: ""
         description = json.text ?: ""
         isRoute = json.isRoute ?: false
         owner = EntityID(sessId, Users)
         parent = parentId?.let { EntityID(it, Collections) }
-      }.toIdCollection()
+      }
+      json.images?.also {
+        CollectionPics.batchInsert(it) { imageId ->
+          this[CollectionPics.collection] = coll.id
+          this[CollectionPics.picture] = EntityID(imageId, Pictures)
+        }
+      }
+      coll.toIdCollection()
     }
     call.respond(collection)
   }

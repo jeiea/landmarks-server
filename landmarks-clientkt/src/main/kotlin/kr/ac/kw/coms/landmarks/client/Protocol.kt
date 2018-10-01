@@ -34,6 +34,7 @@ data class CollectionRep(
   var title: String? = null,
   var text: String? = null,
   var images: List<Int>? = null,
+  var previews: List<WithIntId<PictureRep>>? = null,
   var likes: Int? = null,
   var liking: Boolean? = null,
   var isRoute: Boolean? = null,
