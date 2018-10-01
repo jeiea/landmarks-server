@@ -72,17 +72,13 @@ fun Routing.collection() = route("/collection") {
     call.respond(collection)
   }
 
-  get("/{id}/{page}") {
+  get("/{id}/picture") { _ ->
     requireLogin()
     val ar = mutableListOf<WithIntId<PictureRep>>()
     val collectionId = EntityID(getParamId(call), Collections)
-    val page: Int = call.parameters["page"]?.toIntOrNull() ?: throw ValidException("invalid page")
     ar.addAll(transaction {
-      (CollectionPics innerJoin Pictures)
-        .select { CollectionPics.picture eq Pictures.id }
-        .andWhere { CollectionPics.collection eq collectionId }
-        .limit(30, max(page - 1, 0))
-        .map(Pictures::toIdPicture)
+      val coll = Collection.findById(collectionId) ?: notFoundPage()
+      coll.pics.map { it.picture.toIdPicture() }
     })
     call.respond(ar)
   }

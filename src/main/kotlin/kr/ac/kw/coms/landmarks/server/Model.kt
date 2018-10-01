@@ -5,10 +5,7 @@ import com.zaxxer.hikari.HikariDataSource
 import kr.ac.kw.coms.landmarks.client.CollectionRep
 import kr.ac.kw.coms.landmarks.client.PictureRep
 import kr.ac.kw.coms.landmarks.client.WithIntId
-import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.dao.IntEntity
-import org.jetbrains.exposed.dao.IntEntityClass
-import org.jetbrains.exposed.dao.IntIdTable
+import org.jetbrains.exposed.dao.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.SchemaUtils.drop
@@ -35,25 +32,6 @@ object Pictures : IntIdTable() {
   val longi = float("longi").nullable()
   val created = datetime("created")
   val public = bool("public")
-
-  fun toIdPicture(row: ResultRow): WithIntId<PictureRep> {
-    val pic = PictureRep(
-      row[Pictures.owner].value,
-      row[Pictures.address],
-      row[Pictures.latit],
-      row[Pictures.longi],
-      row[Pictures.created].toDate(),
-      row[Pictures.public]
-    )
-    return WithIntId(row[Pictures.id].value, pic)
-  }
-}
-
-object Quiz : IntIdTable() {
-  val figure = entityId("figure", Pictures).references(Pictures.id)
-  val body = text("body")
-  val author = entityId("author", Users).references(Users.id)
-  val answers = text("answers")
 }
 
 object Collections : IntIdTable() {
@@ -65,12 +43,12 @@ object Collections : IntIdTable() {
   val parent = reference("parent", Collections).nullable()
 }
 
-object CollectionPics : Table() {
+object CollectionPics : IntIdTable() {
   val collection = reference("collection", Collections)
   val picture = reference("picture", Pictures)
 }
 
-object CollectionLikes : Table() {
+object CollectionLikes : IntIdTable() {
   val collection = reference("collection", Collections)
   val liker = reference("liker", Users)
 }
@@ -92,16 +70,18 @@ class Picture(id: EntityID<Int>) : IntEntity(id) {
   var filename by Pictures.filename
   var file by Pictures.file
   var thumbnail by Pictures.thumbnail
-  var owner by Pictures.owner
   var address by Pictures.address
+  var owner by Pictures.owner
   var latit by Pictures.latit
   var longi by Pictures.longi
   var created by Pictures.created
   var public by Pictures.public
 
+  var author by User referencedOn Pictures.owner
+
   fun toIdPicture(): WithIntId<PictureRep> {
     val pic = PictureRep(
-      owner.value, address,
+      owner.value, author.nick, address,
       latit, longi, created.toDate(), public
     )
     return WithIntId(id.value, pic)
@@ -115,22 +95,29 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
   var title by Collections.title
   var description by Collections.description
   var isRoute by Collections.isRoute
-  var owner by Collections.owner
   var parent by Collections.parent
+  var owner by Collections.owner
+
+  var author by User referencedOn Collections.owner
+  val pics by CollectionPic referrersOn CollectionPics.collection
 
   fun toIdCollection(): WithIntId<CollectionRep> {
-    val pics = (CollectionPics innerJoin Pictures)
-      .select { CollectionPics.picture eq Pictures.id }
-      .andWhere { CollectionPics.collection eq id }
-      .map(Pictures::toIdPicture)
     val likes = CollectionLikes.select { CollectionLikes.liker eq id }
     val likeNum = likes.count()
     val liking = likes.any { row -> row[CollectionLikes.liker] == id }
     val collection = CollectionRep(
-      title, description, pics.map { it.id }, pics,
+      title, description,
+      pics.map { it.picture.id.value },
+      pics.map { it.picture.toIdPicture() },
       likeNum, liking, isRoute, parent?.value)
     return WithIntId(id.value, collection)
   }
+}
+
+class CollectionPic(id: EntityID<Int>) : IntEntity(id) {
+  companion object : IntEntityClass<CollectionPic>(CollectionPics)
+
+  var picture by Picture referencedOn CollectionPics.picture
 }
 
 fun dbInitialize() {

@@ -191,8 +191,8 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return get("$basePath/collection/user/$ownerId")
   }
 
-  suspend fun getCollectionPics(collectionId: Int, page: Int = 1): MutableList<WithIntId<PictureRep>> {
-    return get("$basePath/collection/$collectionId/$page")
+  suspend fun getCollectionPics(collectionId: Int): MutableList<WithIntId<PictureRep>> {
+    return get("$basePath/collection/$collectionId/picture")
   }
 
   suspend fun getMyCollections(): MutableList<WithIntId<CollectionRep>> {

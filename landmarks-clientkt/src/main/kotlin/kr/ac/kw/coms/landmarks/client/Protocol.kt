@@ -22,10 +22,11 @@ data class LoginRep(
 )
 
 data class PictureRep(
-  val owner: Int? = null,
-  val address: String? = null,
-  val lat: Float? = null,
-  val lon: Float? = null,
+  var uid: Int? = null,
+  var author: String? = null,
+  var address: String? = null,
+  var lat: Float? = null,
+  var lon: Float? = null,
   var time: Date? = null,
   var isPublic: Boolean = true
 )

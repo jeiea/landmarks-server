@@ -107,9 +107,8 @@ fun Route.problem() = route("/problem") {
   get("/random/{n}") { _ ->
     val n: Int = call.parameters["n"]?.toIntOrNull() ?: 1
     val pics: List<WithIntId<PictureRep>> = transaction {
-      Pictures
-        .selectAll().orderBy(Random()).limit(n)
-        .map(Pictures::toIdPicture)
+      val query = Pictures.selectAll().orderBy(Random()).limit(n)
+      Picture.wrapRows(query).map { it.toIdPicture() }
     }
     call.respond(pics)
   }

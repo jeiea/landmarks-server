@@ -35,10 +35,11 @@ fun Routing.picture() = route("/picture") {
   put("/") {
     val parts: MultiPartData = call.receiveMultipart()
     val sess: LMSession = requireLogin()
-    val pic: Picture = transaction {
-      insertPicture(parts, sess)
+    val pic: WithIntId<PictureRep> = transaction {
+      val uid = EntityID(sess.userId, Users)
+      insertPicture(parts, uid).toIdPicture()
     }
-    call.respond(pic.toIdPicture())
+    call.respond(pic)
   }
 
   get("/user/{id}") { _ ->
@@ -72,7 +73,7 @@ fun Routing.picture() = route("/picture") {
         isGrantedTo(userId) and (Pictures.id eq id)
       }.firstOrNull()?.toIdPicture()
     }
-    if (pic == null || pic.value.run { owner != userId && isPublic }) {
+    if (pic == null || pic.value.run { uid != userId && isPublic }) {
       call.respond(HttpStatusCode.NotFound)
     } else {
       call.respond(pic.value)
@@ -93,7 +94,7 @@ fun Routing.picture() = route("/picture") {
       pic.public = info.isPublic
       pic.toIdPicture()
     }
-    if (pic == null || pic.value.run { owner != userId && isPublic }) {
+    if (pic == null || pic.value.run { uid != userId && isPublic }) {
       call.respond(HttpStatusCode.NotFound)
     } else {
       call.respond(pic.value)
@@ -117,12 +118,12 @@ fun SqlExpressionBuilder.isGrantedTo(userId: Int): Op<Boolean> {
   return (Pictures.public eq true) or (Pictures.owner eq userId)
 }
 
-fun insertPicture(parts: MultiPartData, sess: LMSession): Picture {
+fun insertPicture(parts: MultiPartData, uid: EntityID<Int>): Picture {
   return Picture.new {
-    owner = EntityID(sess.userId, Users)
+    owner = uid
     public = true
     runBlocking {
-      parts.forEachPart(assemblePicture(this@new, sess.userId))
+      parts.forEachPart(assemblePicture(this@new, uid.value))
     }
   }
 }
