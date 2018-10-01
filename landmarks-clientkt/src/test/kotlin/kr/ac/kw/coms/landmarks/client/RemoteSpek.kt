@@ -68,7 +68,7 @@ class RemoteSpek : Spek({
     }
 
     blit("download picture") {
-      client.getPicture(pics[0].id).readBytes().size `should be greater than` 0
+      client.getPicture(pics[0].id).readBytes().size `should be greater than` 3000
     }
 
     var replaced = PictureRep()
@@ -95,6 +95,10 @@ class RemoteSpek : Spek({
       quizs[0].id `should not be equal to` quizs[1].id
     }
 
+    blit("query thumbnail") {
+      client.getThumbnail(pics[0].id).readBytes().size `should be greater than` 1000
+    }
+
     // Deletion of picture is not yet implemented.
 
     val collection = CollectionRep(
@@ -111,10 +115,17 @@ class RemoteSpek : Spek({
       client.modifyCollection(realCollection!!.id, collection)
     }
 
+    var createdCollId = 0
     blit("query my collections") {
       val queried = client.getMyCollections()
+      createdCollId = queried[0].id
       queried.size `should be equal to` 1
       collection.images!! `should equal` queried[0].value.images!!
+    }
+
+    blit("query collection picture info") {
+      val collPics = client.getCollectionPics(createdCollId)
+      collPics.size `should be equal to` pics.size
     }
 
     // Deletion of collection is not yet implemented

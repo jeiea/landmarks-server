@@ -5,11 +5,13 @@ import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.routing.*
 import kr.ac.kw.coms.landmarks.client.CollectionRep
-import kr.ac.kw.coms.landmarks.client.ServerOK
+import kr.ac.kw.coms.landmarks.client.PictureRep
+import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
+import kotlin.math.max
 
 fun Routing.collection() = route("/collection") {
 
@@ -49,7 +51,7 @@ fun Routing.collection() = route("/collection") {
       }
       json.liking?.also { liking ->
         CollectionLikes.deleteWhere {
-          (CollectionLikes.liker eq userId) and(CollectionLikes.collection eq colId)
+          (CollectionLikes.liker eq userId) and (CollectionLikes.collection eq colId)
         }
         if (liking) {
           CollectionLikes.insert {
@@ -61,6 +63,21 @@ fun Routing.collection() = route("/collection") {
       col.toIdCollection()
     }
     call.respond(collection)
+  }
+
+  get("/{id}/{page}") {
+    requireLogin()
+    val ar = mutableListOf<WithIntId<PictureRep>>()
+    val collectionId = EntityID(getParamId(call), Collections)
+    val page: Int = call.parameters["page"]?.toIntOrNull() ?: throw ValidException("invalid page")
+    ar.addAll(transaction {
+      (CollectionPics innerJoin Pictures)
+        .select { CollectionPics.picture eq Pictures.id }
+        .andWhere { CollectionPics.collection eq collectionId }
+        .limit(30, max(page - 1, 0))
+        .map(Pictures::toIdPicture)
+    })
+    call.respond(ar)
   }
 
   get("/user/{id}") { _ ->
