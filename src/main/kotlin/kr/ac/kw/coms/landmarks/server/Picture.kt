@@ -115,7 +115,7 @@ fun Routing.picture() = route("/picture") {
 }
 
 fun SqlExpressionBuilder.isGrantedTo(userId: Int): Op<Boolean> {
-  return (Pictures.public eq true) or (Pictures.owner eq userId)
+  return (Pictures.isPublic eq true) or (Pictures.owner eq userId)
 }
 
 fun insertPicture(parts: MultiPartData, uid: EntityID<Int>): Picture {

@@ -5,10 +5,14 @@ import com.zaxxer.hikari.HikariDataSource
 import kr.ac.kw.coms.landmarks.client.CollectionRep
 import kr.ac.kw.coms.landmarks.client.PictureRep
 import kr.ac.kw.coms.landmarks.client.WithIntId
-import org.jetbrains.exposed.dao.*
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.dao.EntityID
+import org.jetbrains.exposed.dao.IntEntity
+import org.jetbrains.exposed.dao.IntEntityClass
+import org.jetbrains.exposed.dao.IntIdTable
+import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.SchemaUtils.drop
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.sql.Connection
@@ -31,7 +35,7 @@ object Pictures : IntIdTable() {
   val latit = float("latit").nullable()
   val longi = float("longi").nullable()
   val created = datetime("created")
-  val public = bool("public")
+  val isPublic = bool("public")
 }
 
 object Collections : IntIdTable() {
@@ -40,6 +44,7 @@ object Collections : IntIdTable() {
   val description = text("description")
   val isRoute = bool("isRoute").default(false)
   val owner = reference("owner", Users)
+  val isPublic = bool("public")
   val parent = reference("parent", Collections).nullable()
 }
 
@@ -75,7 +80,7 @@ class Picture(id: EntityID<Int>) : IntEntity(id) {
   var latit by Pictures.latit
   var longi by Pictures.longi
   var created by Pictures.created
-  var public by Pictures.public
+  var public by Pictures.isPublic
 
   var author by User referencedOn Pictures.owner
 
@@ -97,6 +102,7 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
   var isRoute by Collections.isRoute
   var parent by Collections.parent
   var owner by Collections.owner
+  var isPublic by Collections.isPublic
 
   var author by User referencedOn Collections.owner
   val pics by CollectionPic referrersOn CollectionPics.collection
@@ -107,9 +113,9 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
     val liking = likes.any { row -> row[CollectionLikes.liker] == id }
     val collection = CollectionRep(
       title, description,
-      pics.map { it.picture.id.value },
-      pics.map { it.picture.toIdPicture() },
-      likeNum, liking, isRoute, parent?.value)
+      ArrayList(pics.map { it.picture.id.value }),
+      ArrayList(pics.map { it.picture.toIdPicture() }),
+      likeNum, liking, isRoute, isPublic, parent?.value)
     return WithIntId(id.value, collection)
   }
 }

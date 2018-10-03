@@ -8,12 +8,25 @@ import kr.ac.kw.coms.landmarks.client.CollectionRep
 import kr.ac.kw.coms.landmarks.client.PictureRep
 import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
-import kotlin.math.max
 
 fun Routing.collection() = route("/collection") {
+
+  get("/") { _ ->
+    val uid = EntityID(requireLogin().userId, Users)
+    val colls = transaction {
+      Collection.find {
+        (Collections.isPublic eq true) and (Collections.owner neq uid)
+      }
+        .limit(30).map(Collection::toIdCollection)
+    }
+    call.respond(colls)
+  }
 
   put("/{id?}") { _ ->
     val parentId = call.parameters["id"]?.toInt()
@@ -26,6 +39,7 @@ fun Routing.collection() = route("/collection") {
         description = json.text ?: ""
         isRoute = json.isRoute ?: false
         owner = EntityID(sessId, Users)
+        isPublic = json.isPublic ?: true
         parent = parentId?.let { EntityID(it, Collections) }
       }
       json.images?.also {
@@ -49,6 +63,7 @@ fun Routing.collection() = route("/collection") {
       json.title?.also { col.title = it }
       json.text?.also { col.description = it }
       json.isRoute?.also { col.isRoute = it }
+      json.isPublic?.also { col.isPublic = it }
       json.images?.also {
         CollectionPics.deleteWhere { CollectionPics.collection eq colId }
         CollectionPics.batchInsert(it) { imageId ->
