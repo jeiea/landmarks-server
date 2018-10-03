@@ -24,6 +24,10 @@ import java.util.*
 import kotlin.math.max
 
 class Remote(base: HttpClient, val basePath: String = herokuUri) {
+  /*
+  Implementation details: method's signature MutableList should be kept.
+  Gson can't aware List<> in deserialization type detection.
+   */
 
   val http: HttpClient
   val nominatimLastRequestMs = ArrayChannel<Long>(1)
@@ -146,7 +150,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     }
   }
 
-  suspend fun getRandomProblems(n: Int): List<WithIntId<PictureRep>> {
+  suspend fun getRandomProblems(n: Int): MutableList<WithIntId<PictureRep>> {
     return get("$basePath/problem/random/$n")
   }
 
@@ -208,6 +212,4 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
   suspend fun deleteCollection(id: Int) {
     TODO()
   }
-
-
 }
