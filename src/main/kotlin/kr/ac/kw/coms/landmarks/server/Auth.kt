@@ -16,8 +16,7 @@ import io.ktor.routing.route
 import io.ktor.sessions.get
 import io.ktor.sessions.sessions
 import io.ktor.sessions.set
-import kr.ac.kw.coms.landmarks.client.LoginRep
-import kr.ac.kw.coms.landmarks.client.ServerFault
+import kr.ac.kw.coms.landmarks.client.AccountForm
 import kr.ac.kw.coms.landmarks.client.ServerOK
 import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.exceptions.ExposedSQLException
@@ -52,7 +51,7 @@ fun Route.authentication() = route("/auth") {
   }
 
   post("/register") {
-    val reg: LoginRep = call.receive()
+    val reg: AccountForm = call.receive()
     fun throwIfMissing(name: String, field: String?) {
       if (field.isNullOrBlank()) {
         throw ValidException("${name} field not found")
@@ -117,7 +116,7 @@ fun Route.authentication() = route("/auth") {
   }
 
   post("/login") {
-    val param: LoginRep = call.receive()
+    val param: AccountForm = call.receive()
     if (param.login == null) {
       throw ValidException("login field missing")
     }
@@ -132,7 +131,7 @@ fun Route.authentication() = route("/auth") {
       throw ValidException("password incorrect")
     }
     call.sessions.set(LMSession(user.id.value))
-    val info = LoginRep(user.login, email = user.email, nick = user.nick)
+    val info = AccountForm(user.login, email = user.email, nick = user.nick)
     call.respond(WithIntId(user.id.value, info))
   }
 }

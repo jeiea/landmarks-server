@@ -14,7 +14,7 @@ import io.ktor.response.respond
 import io.ktor.response.respondBytes
 import io.ktor.routing.*
 import kotlinx.coroutines.experimental.runBlocking
-import kr.ac.kw.coms.landmarks.client.PictureRep
+import kr.ac.kw.coms.landmarks.client.PictureInfo
 import kr.ac.kw.coms.landmarks.client.WithIntId
 import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import net.coobird.thumbnailator.Thumbnails
@@ -35,7 +35,7 @@ fun Routing.picture() = route("/picture") {
   put("/") {
     val parts: MultiPartData = call.receiveMultipart()
     val sess: LMSession = requireLogin()
-    val pic: WithIntId<PictureRep> = transaction {
+    val pic: WithIntId<PictureInfo> = transaction {
       val uid = EntityID(sess.userId, Users)
       insertPicture(parts, uid).toIdPicture()
     }
@@ -43,7 +43,7 @@ fun Routing.picture() = route("/picture") {
   }
 
   get("/user/{id}") { _ ->
-    val ar = mutableListOf<WithIntId<PictureRep>>()
+    val ar = mutableListOf<WithIntId<PictureInfo>>()
     val calleeId: Int = getParamId(call)
     val callerId: Int = requireLogin().userId
     ar.addAll(transaction {
@@ -68,7 +68,7 @@ fun Routing.picture() = route("/picture") {
   get("/info/{id}") { _ ->
     val id: Int = getParamId(call)
     val userId: Int = requireLogin().userId
-    val pic: WithIntId<PictureRep>? = transaction {
+    val pic: WithIntId<PictureInfo>? = transaction {
       Picture.find {
         isGrantedTo(userId) and (Pictures.id eq id)
       }.firstOrNull()?.toIdPicture()
@@ -83,8 +83,8 @@ fun Routing.picture() = route("/picture") {
   post("/info/{id}") { _ ->
     val id: Int = getParamId(call)
     val userId: Int = requireLogin().userId
-    val info: PictureRep = call.receive()
-    val pic: WithIntId<PictureRep>? = transaction {
+    val info: PictureInfo = call.receive()
+    val pic: WithIntId<PictureInfo>? = transaction {
       val pic = Picture.find {
         isGrantedTo(userId) and (Pictures.id eq id)
       }.firstOrNull() ?: notFoundPage()

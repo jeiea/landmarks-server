@@ -4,8 +4,8 @@ import io.ktor.application.call
 import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.routing.*
-import kr.ac.kw.coms.landmarks.client.CollectionRep
-import kr.ac.kw.coms.landmarks.client.PictureRep
+import kr.ac.kw.coms.landmarks.client.CollectionInfo
+import kr.ac.kw.coms.landmarks.client.PictureInfo
 import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.and
@@ -31,7 +31,7 @@ fun Routing.collection() = route("/collection") {
   put("/{id?}") { _ ->
     val parentId = call.parameters["id"]?.toInt()
     val sessId = requireLogin().userId
-    val json: CollectionRep = call.receive()
+    val json: CollectionInfo = call.receive()
     val collection = transaction {
       val coll = Collection.new {
         created = DateTime.now()
@@ -56,7 +56,7 @@ fun Routing.collection() = route("/collection") {
   post("/{id}") { _ ->
     val userId: EntityID<Int> = EntityID(requireLogin().userId, Users)
     val colId: EntityID<Int> = EntityID(getParamId(call), Collections)
-    val json: CollectionRep = call.receive()
+    val json: CollectionInfo = call.receive()
 
     val collection = transaction {
       val col: Collection = Collection.findById(colId) ?: notFoundPage()
@@ -89,7 +89,7 @@ fun Routing.collection() = route("/collection") {
 
   get("/{id}/picture") { _ ->
     requireLogin()
-    val ar = mutableListOf<WithIntId<PictureRep>>()
+    val ar = mutableListOf<WithIntId<PictureInfo>>()
     val collectionId = EntityID(getParamId(call), Collections)
     ar.addAll(transaction {
       val coll = Collection.findById(collectionId) ?: notFoundPage()

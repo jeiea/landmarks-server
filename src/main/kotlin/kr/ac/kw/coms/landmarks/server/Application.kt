@@ -11,7 +11,7 @@ import io.ktor.routing.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.*
-import kr.ac.kw.coms.landmarks.client.PictureRep
+import kr.ac.kw.coms.landmarks.client.PictureInfo
 import kr.ac.kw.coms.landmarks.client.ServerFault
 import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.sql.Random
@@ -106,7 +106,7 @@ fun Route.problem() = route("/problem") {
 
   get("/random/{n}") { _ ->
     val n: Int = call.parameters["n"]?.toIntOrNull() ?: 1
-    val pics: List<WithIntId<PictureRep>> = transaction {
+    val pics: List<WithIntId<PictureInfo>> = transaction {
       val query = Pictures.selectAll().orderBy(Random()).limit(n)
       Picture.wrapRows(query).map { it.toIdPicture() }
     }
