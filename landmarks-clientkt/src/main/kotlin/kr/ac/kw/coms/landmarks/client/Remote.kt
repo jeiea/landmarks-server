@@ -172,8 +172,8 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return get("$basePath/picture/$id")
   }
 
-  suspend fun getThumbnail(id: Int): InputStream {
-    return get("$basePath/picture/thumbnail/$id")
+  suspend fun getThumbnail(id: Int, desiredWidth: Int = 640, desiredHeight: Int = 480): InputStream {
+    return get("$basePath/picture/thumbnail/$id?width=$desiredWidth&height=$desiredHeight")
   }
 
   suspend fun getPictureInfos(userId: Int): MutableList<WithIntId<PictureInfo>> {

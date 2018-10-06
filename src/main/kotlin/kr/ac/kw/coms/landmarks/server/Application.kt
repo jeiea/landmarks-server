@@ -17,8 +17,6 @@ import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.sql.Random
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.io.PrintWriter
-import java.io.StringWriter
 
 
 fun main(args: Array<String>) {
@@ -29,11 +27,6 @@ fun main(args: Array<String>) {
   server.start(wait = true)
 }
 
-
-data class ValidException(
-  val msg: String,
-  val code: HttpStatusCode = HttpStatusCode.BadRequest
-) : Throwable()
 
 fun Application.landmarksServer() {
   install(CallLogging)
@@ -84,20 +77,6 @@ fun Application.landmarksServer() {
     collection()
     problem()
   }
-}
-
-fun stacktraceToString(cause: Throwable): String {
-  return StringWriter().also { sw ->
-    cause.printStackTrace(PrintWriter(sw))
-  }.toString()
-}
-
-fun getParamId(call: ApplicationCall): Int {
-  return call.parameters["id"]?.toIntOrNull() ?: throw ValidException("id not valid")
-}
-
-fun notFoundPage(): Nothing {
-  throw ValidException("Not found", HttpStatusCode.NotFound)
 }
 
 fun Route.problem() = route("/problem") {

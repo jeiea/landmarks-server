@@ -96,7 +96,8 @@ class RemoteSpek : Spek({
     }
 
     blit("query thumbnail") {
-      client.getThumbnail(pics[0].id).readBytes().size `should be greater than` 1000
+      val stream = client.getThumbnail(pics[0].id, 400, 200)
+      stream.readBytes().size `should be less than` 200000
     }
 
     // Deletion of picture is not yet implemented.

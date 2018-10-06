@@ -28,6 +28,8 @@ import org.joda.time.DateTime
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.sql.Blob
+import javax.imageio.ImageIO
 import javax.sql.rowset.serial.SerialBlob
 
 fun Routing.picture() = route("/picture") {
@@ -103,15 +105,42 @@ fun Routing.picture() = route("/picture") {
 
   get("/thumbnail/{id}") {
     val id: Int = getParamId(call)
+    val desireWidth: Int = getIntParam(call, "width")
+    val desireHeight: Int = getIntParam(call, "height")
     val userId: Int = requireLogin().userId
     val bytes = transaction {
       val pic = Picture.find {
         isGrantedTo(userId) and (Pictures.id eq id)
-      }.firstOrNull() ?: throw ValidException("Not found", HttpStatusCode.NotFound)
-      pic.thumbnail.binaryStream.readBytes()
+      }.firstOrNull() ?: notFoundPage()
+
+      val level: Int = getThumbnailLevel(pic.width, pic.height, desireWidth, desireHeight)
+      val fitThumbnail: Blob = when (level) {
+        0 -> pic.file
+        1 -> pic.thumbnail1
+        2 -> pic.thumbnail2
+        3 -> pic.thumbnail3
+        else -> pic.thumbnail4
+      }
+      fitThumbnail.binaryStream.readBytes()
     }
     call.respondBytes(bytes)
   }
+}
+
+private fun getThumbnailLevel(
+  picWidth: Int, picHeight: Int,
+  desireWidth: Int, desireHeight: Int): Int {
+
+  var width = picWidth
+  var height = picHeight
+  for (i in 0..3) {
+    width /= 2
+    height /= 2
+    if (width < desireWidth || height < desireHeight) {
+      return i
+    }
+  }
+  return 4
 }
 
 fun SqlExpressionBuilder.isGrantedTo(userId: Int): Op<Boolean> {
@@ -166,13 +195,25 @@ suspend fun receivePictureFile(record: Picture, part: PartData.FileItem, userId:
     part.streamProvider().use { it.copyToSuspend(buffer) }
     val ar = buffer.toByteArray()
     record.file = SerialBlob(ar)
-    buffer.reset()
 
-    Thumbnails.of(ByteArrayInputStream(ar))
-      .size(200, 200)
-      .toOutputStream(buffer)
-    record.thumbnail = SerialBlob(buffer.toByteArray())
-    buffer.reset()
+    ar.inputStream().use {
+      val img = ImageIO.read(ar.inputStream())
+      record.width = img.width
+      record.height = img.height
+    }
+
+    fun scaleOf(scale: Double): SerialBlob {
+      buffer.reset()
+      Thumbnails
+        .of(ByteArrayInputStream(ar))
+        .scale(scale)
+        .toOutputStream(buffer)
+      return SerialBlob(buffer.toByteArray())
+    }
+    record.thumbnail1 = scaleOf(0.5)
+    record.thumbnail2 = scaleOf(0.25)
+    record.thumbnail3 = scaleOf(0.125)
+    record.thumbnail4 = scaleOf(0.0625)
 
     getLatLon(ar)?.also { (lat, lon) ->
       record.latit = lat

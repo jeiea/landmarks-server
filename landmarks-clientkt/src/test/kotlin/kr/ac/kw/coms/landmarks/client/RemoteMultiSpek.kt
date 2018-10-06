@@ -6,16 +6,18 @@ import org.amshove.kluent.`should be true`
 import org.amshove.kluent.`should throw`
 import org.jetbrains.spek.api.Spek
 import org.jetbrains.spek.api.dsl.describe
+import org.jetbrains.spek.api.dsl.xdescribe
 import org.junit.platform.runner.JUnitPlatform
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.*
 
 @RunWith(JUnitPlatform::class)
 class RemoteMultiSpek : Spek({
 
   fun newClient(): Remote {
-//    return Remote(getTestClient(), "http://localhost:8080")
-    return Remote(getTestClient(), "https://landmarks-coms.herokuapp.com/")
+    return Remote(getTestClient(), "http://localhost:8080")
+//    return Remote(getTestClient(), "http://landmarks-coms.herokuapp.com/")
   }
 
   val client = newClient()
@@ -85,6 +87,7 @@ class RemoteMultiSpek : Spek({
     }
   }
 
+  val userPics = mutableListOf<MutableList<WithIntId<PictureInfo>>>()
   describe("test picture features with multiple users") {
     blit("uploads pictures") {
       val archive = File("../data/archive1")
@@ -102,7 +105,6 @@ class RemoteMultiSpek : Spek({
       }
     }
 
-    val userPics = mutableListOf<MutableList<WithIntId<PictureInfo>>>()
     blit("test valid access") {
       clients.forEach {
         val pics = it.getMyPictureInfos()
@@ -110,6 +112,41 @@ class RemoteMultiSpek : Spek({
         userPics.add(pics)
       }
     }
+  }
+
+  describe("test collection features with multiple users") {
+    blit("upload collections") {
+      val ids = userPics.flatten().map { it.id }.toMutableList()
+      val collIds = mutableListOf<Int>();
+      var cnt = 1
+      clients.zip(0..9).forEach { (cl, i) ->
+        (1..4).forEach { j ->
+          ids.shuffle()
+          val coll = CollectionInfo(
+            title = "diary $i-$j",
+            text = "설명 $cnt 번째",
+            images = ArrayList(ids.take(8)),
+            isPublic = true,
+            isRoute = true,
+            likes = i,
+            liking = true
+          )
+          val res = cl.uploadCollection(coll)
+          collIds.add(res.id)
+          cnt++
+        }
+      }
+      collIds.size `should be equal to` collIds.distinct().size
+    }
+
+    blit("download collection") {
+      clients.zip(0..9).forEach { (cl, i) ->
+        val coll = cl.getMyCollections()
+        coll.size `should be equal to` 4
+        coll.forEach { it.value.previews?.size!! `should be equal to` 8 }
+      }
+    }
+
   }
 
 })

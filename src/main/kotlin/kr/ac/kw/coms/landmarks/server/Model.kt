@@ -29,7 +29,12 @@ object Users : IntIdTable() {
 object Pictures : IntIdTable() {
   val filename = varchar("filename", 128)
   val file = blob("file")
-  val thumbnail = blob("thumbnail")
+  val width = integer("width")
+  val height = integer("height")
+  val thumbnail1 = blob("thumbnail1")
+  val thumbnail2 = blob("thumbnail2")
+  val thumbnail3 = blob("thumbnail3")
+  val thumbnail4 = blob("thumbnail4")
   val owner = entityId("owner", Users).references(Users.id)
   val address = varchar("address", 50).nullable()
   val latit = float("latit").nullable()
@@ -74,7 +79,12 @@ class Picture(id: EntityID<Int>) : IntEntity(id) {
 
   var filename by Pictures.filename
   var file by Pictures.file
-  var thumbnail by Pictures.thumbnail
+  var width by Pictures.width
+  var height by Pictures.height
+  var thumbnail1 by Pictures.thumbnail1
+  var thumbnail2 by Pictures.thumbnail2
+  var thumbnail3 by Pictures.thumbnail3
+  var thumbnail4 by Pictures.thumbnail4
   var address by Pictures.address
   var owner by Pictures.owner
   var latit by Pictures.latit

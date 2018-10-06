@@ -46,7 +46,7 @@ fun Route.authentication() = route("/auth") {
 
   intercept(Call) {
     if (call.request.header(HttpHeaders.UserAgent) != "landmarks-client") {
-      throw ValidException("landmarks-client agent required")
+      errorPage("landmarks-client agent required")
     }
   }
 
@@ -54,7 +54,7 @@ fun Route.authentication() = route("/auth") {
     val reg: AccountForm = call.receive()
     fun throwIfMissing(name: String, field: String?) {
       if (field.isNullOrBlank()) {
-        throw ValidException("${name} field not found")
+        errorPage("${name} field not found")
       }
     }
 
@@ -65,7 +65,7 @@ fun Route.authentication() = route("/auth") {
 
     val userAgent = context.request.headers["User-Agent"]
     if (userAgent != "landmarks-client") {
-      throw ValidException("User-Agent should be landmarks-client")
+      errorPage("User-Agent should be landmarks-client")
     }
 
     val digest = getSHA256(reg.password!!)
@@ -101,13 +101,13 @@ fun Route.authentication() = route("/auth") {
   get("/verification/{verKey}") {
     val verKey = call.parameters["verKey"] ?: ""
     if (verKey == "") {
-      throw ValidException("verification key not present")
+      errorPage("verification key not present")
     }
 
     transaction {
       val target = Users.select { Users.verification eq verKey }.firstOrNull()
       if (target == null) {
-        throw ValidException("invalid verification key")
+        errorPage("invalid verification key")
       }
       else {
         Users.deleteWhere { Users.verification eq verKey }
@@ -118,17 +118,17 @@ fun Route.authentication() = route("/auth") {
   post("/login") {
     val param: AccountForm = call.receive()
     if (param.login == null) {
-      throw ValidException("login field missing")
+      errorPage("login field missing")
     }
     if (param.password == null) {
-      throw ValidException("password field missing")
+      errorPage("password field missing")
     }
     val user = transaction {
       User.find { Users.login eq param.login!! }.firstOrNull()
     }
     val hash = getSHA256(param.password!!)
     if (user == null || !user.passhash!!.contentEquals(hash)) {
-      throw ValidException("password incorrect")
+      errorPage("password incorrect")
     }
     call.sessions.set(LMSession(user.id.value))
     val info = AccountForm(user.login, email = user.email, nick = user.nick)
