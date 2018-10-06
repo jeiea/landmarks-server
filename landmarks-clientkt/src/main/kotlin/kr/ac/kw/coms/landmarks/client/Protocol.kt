@@ -24,6 +24,8 @@ data class AccountForm(
 interface IPictureInfo {
   var uid: Int?
   var author: String?
+  var width: Int?
+  var height: Int?
   var address: String?
   var lat: Float?
   var lon: Float?
@@ -34,6 +36,8 @@ interface IPictureInfo {
 data class PictureInfo(
   override var uid: Int? = null,
   override var author: String? = null,
+  override var width: Int? = null,
+  override var height: Int? = null,
   override var address: String? = null,
   override var lat: Float? = null,
   override var lon: Float? = null,

@@ -96,7 +96,7 @@ class Picture(id: EntityID<Int>) : IntEntity(id) {
 
   fun toIdPicture(): WithIntId<PictureInfo> {
     val pic = PictureInfo(
-      owner.value, author.nick, address,
+      owner.value, author.nick, width, height, address,
       latit, longi, created.toDate(), public
     )
     return WithIntId(id.value, pic)
