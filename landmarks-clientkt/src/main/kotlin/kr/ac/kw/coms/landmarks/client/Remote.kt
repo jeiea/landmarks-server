@@ -37,7 +37,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     private const val chromeAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.59 Safari/537.36"
   }
 
-  var profile: WithIntId<AccountForm>? = null
+  var profile: IdAccountForm? = null
 
   suspend inline fun <reified T> request(method: HttpMethod, url: String, builder: HttpRequestBuilder.() -> Unit = {}): T {
     val response: HttpResponse = http.request {
@@ -128,14 +128,14 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     }
   }
 
-  suspend fun login(ident: String, pass: String): WithIntId<AccountForm> {
+  suspend fun login(ident: String, pass: String): IdAccountForm {
     profile = post("$basePath/auth/login") {
       json(AccountForm(login = ident, password = pass))
     }
     return profile!!
   }
 
-  suspend fun uploadPicture(meta: PictureInfo, file: File): WithIntId<PictureInfo> {
+  suspend fun uploadPicture(meta: PictureInfo, file: File): IdPictureInfo {
     val filename: String = URLEncoder.encode(file.name, "UTF-8")
     val form = MultiPartFormDataContent(formData {
       meta.lat?.also { append("lat", it.toString()) }
@@ -150,12 +150,12 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     }
   }
 
-  suspend fun getRandomProblems(n: Int): MutableList<WithIntId<PictureInfo>> {
+  suspend fun getRandomProblems(n: Int): MutableList<IdPictureInfo> {
     return get("$basePath/problem/random/$n")
   }
 
   suspend fun modifyPictureInfo(id: Int, info: PictureInfo) {
-    return post("$basePath/picture/info/${id}") {
+    return post("$basePath/picture/info/$id") {
       json(info)
     }
   }
@@ -176,38 +176,38 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return get("$basePath/picture/thumbnail/$id?width=$desiredWidth&height=$desiredHeight")
   }
 
-  suspend fun getPictureInfos(userId: Int): MutableList<WithIntId<PictureInfo>> {
+  suspend fun getPictureInfos(userId: Int): MutableList<IdPictureInfo> {
     return get("$basePath/picture/user/$userId")
   }
 
-  suspend fun getMyPictureInfos(): MutableList<WithIntId<PictureInfo>> {
+  suspend fun getMyPictureInfos(): MutableList<IdPictureInfo> {
     return getPictureInfos(profile!!.id)
   }
 
 
-  suspend fun uploadCollection(collection: CollectionInfo): WithIntId<CollectionInfo> {
+  suspend fun uploadCollection(collection: CollectionInfo): IdCollectionInfo {
     return put("$basePath/collection") {
       json(collection)
     }
   }
 
-  suspend fun getRandomCollections(): MutableList<WithIntId<CollectionInfo>> {
+  suspend fun getRandomCollections(): MutableList<IdCollectionInfo> {
     return get("$basePath/collection")
   }
 
-  suspend fun getCollections(ownerId: Int): MutableList<WithIntId<CollectionInfo>> {
+  suspend fun getCollections(ownerId: Int): MutableList<IdCollectionInfo> {
     return get("$basePath/collection/user/$ownerId")
   }
 
-  suspend fun getCollectionPics(collectionId: Int): MutableList<WithIntId<PictureInfo>> {
+  suspend fun getCollectionPics(collectionId: Int): MutableList<IdPictureInfo> {
     return get("$basePath/collection/$collectionId/picture")
   }
 
-  suspend fun getMyCollections(): MutableList<WithIntId<CollectionInfo>> {
+  suspend fun getMyCollections(): MutableList<IdCollectionInfo> {
     return getCollections(profile!!.id)
   }
 
-  suspend fun modifyCollection(id: Int, collection: CollectionInfo): WithIntId<CollectionInfo> {
+  suspend fun modifyCollection(id: Int, collection: CollectionInfo): IdCollectionInfo {
     return post("$basePath/collection/${id}") {
       json(collection)
     }

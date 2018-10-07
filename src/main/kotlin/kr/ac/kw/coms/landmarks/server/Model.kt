@@ -3,8 +3,9 @@ package kr.ac.kw.coms.landmarks.server
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import kr.ac.kw.coms.landmarks.client.CollectionInfo
+import kr.ac.kw.coms.landmarks.client.IdCollectionInfo
+import kr.ac.kw.coms.landmarks.client.IdPictureInfo
 import kr.ac.kw.coms.landmarks.client.PictureInfo
-import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
@@ -94,12 +95,12 @@ class Picture(id: EntityID<Int>) : IntEntity(id) {
 
   var author by User referencedOn Pictures.owner
 
-  fun toIdPicture(): WithIntId<PictureInfo> {
+  fun toIdPicture(): IdPictureInfo {
     val pic = PictureInfo(
       owner.value, author.nick, width, height, address,
       latit, longi, created.toDate(), public
     )
-    return WithIntId(id.value, pic)
+    return IdPictureInfo(id.value, pic)
   }
 }
 
@@ -117,7 +118,7 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
   var author by User referencedOn Collections.owner
   val pics by CollectionPic referrersOn CollectionPics.collection
 
-  fun toIdCollection(): WithIntId<CollectionInfo> {
+  fun toIdCollection(): IdCollectionInfo {
     val likes = CollectionLikes.select { CollectionLikes.liker eq id }
     val likeNum = likes.count()
     val liking = likes.any { row -> row[CollectionLikes.liker] == id }
@@ -126,7 +127,7 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
       ArrayList(pics.map { it.picture.id.value }),
       ArrayList(pics.map { it.picture.toIdPicture() }),
       likeNum, liking, isRoute, isPublic, parent?.value)
-    return WithIntId(id.value, collection)
+    return IdCollectionInfo(id.value, collection)
   }
 }
 

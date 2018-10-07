@@ -67,7 +67,7 @@ class RemoteMultiSpek : Spek({
     blit("login as valid users") {
       validUsers.forEach { rep ->
         val cl = newClient()
-        val profile = cl.login(rep.login!!, rep.password!!).value
+        val profile = cl.login(rep.login!!, rep.password!!).data
         profile.login!! `should be equal to` rep.login!!
         profile.email!! `should be equal to` rep.email!!
         profile.nick!! `should be equal to` rep.nick!!
@@ -87,7 +87,7 @@ class RemoteMultiSpek : Spek({
     }
   }
 
-  val userPics = mutableListOf<MutableList<WithIntId<PictureInfo>>>()
+  val userPics = mutableListOf<MutableList<IdPictureInfo>>()
   describe("test picture features with multiple users") {
     blit("uploads pictures") {
       val archive = File("../data/archive1")
@@ -140,10 +140,10 @@ class RemoteMultiSpek : Spek({
     }
 
     blit("download collection") {
-      clients.zip(0..9).forEach { (cl, i) ->
+      clients.forEach { cl ->
         val coll = cl.getMyCollections()
         coll.size `should be equal to` 4
-        coll.forEach { it.value.previews?.size!! `should be equal to` 8 }
+        coll.forEach { it.data.previews?.size!! `should be equal to` 8 }
       }
     }
 

@@ -14,8 +14,8 @@ import io.ktor.response.respond
 import io.ktor.response.respondBytes
 import io.ktor.routing.*
 import kotlinx.coroutines.experimental.runBlocking
+import kr.ac.kw.coms.landmarks.client.IdPictureInfo
 import kr.ac.kw.coms.landmarks.client.PictureInfo
-import kr.ac.kw.coms.landmarks.client.WithIntId
 import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
@@ -37,7 +37,7 @@ fun Routing.picture() = route("/picture") {
   put("/") {
     val parts: MultiPartData = call.receiveMultipart()
     val sess: LMSession = requireLogin()
-    val pic: WithIntId<PictureInfo> = transaction {
+    val pic: IdPictureInfo = transaction {
       val uid = EntityID(sess.userId, Users)
       insertPicture(parts, uid).toIdPicture()
     }
@@ -45,7 +45,7 @@ fun Routing.picture() = route("/picture") {
   }
 
   get("/user/{id}") { _ ->
-    val ar = mutableListOf<WithIntId<PictureInfo>>()
+    val ar = mutableListOf<IdPictureInfo>()
     val calleeId: Int = getParamId(call)
     val callerId: Int = requireLogin().userId
     ar.addAll(transaction {
@@ -70,15 +70,15 @@ fun Routing.picture() = route("/picture") {
   get("/info/{id}") { _ ->
     val id: Int = getParamId(call)
     val userId: Int = requireLogin().userId
-    val pic: WithIntId<PictureInfo>? = transaction {
+    val pic: IdPictureInfo? = transaction {
       Picture.find {
         isGrantedTo(userId) and (Pictures.id eq id)
       }.firstOrNull()?.toIdPicture()
     }
-    if (pic == null || pic.value.run { uid != userId && isPublic }) {
+    if (pic == null || pic.data.run { uid != userId && isPublic }) {
       call.respond(HttpStatusCode.NotFound)
     } else {
-      call.respond(pic.value)
+      call.respond(pic.data)
     }
   }
 
@@ -86,7 +86,7 @@ fun Routing.picture() = route("/picture") {
     val id: Int = getParamId(call)
     val userId: Int = requireLogin().userId
     val info: PictureInfo = call.receive()
-    val pic: WithIntId<PictureInfo>? = transaction {
+    val pic: IdPictureInfo? = transaction {
       val pic = Picture.find {
         isGrantedTo(userId) and (Pictures.id eq id)
       }.firstOrNull() ?: notFoundPage()
@@ -96,10 +96,10 @@ fun Routing.picture() = route("/picture") {
       pic.public = info.isPublic
       pic.toIdPicture()
     }
-    if (pic == null || pic.value.run { uid != userId && isPublic }) {
+    if (pic == null || pic.data.run { uid != userId && isPublic }) {
       call.respond(HttpStatusCode.NotFound)
     } else {
-      call.respond(pic.value)
+      call.respond(pic.data)
     }
   }
 

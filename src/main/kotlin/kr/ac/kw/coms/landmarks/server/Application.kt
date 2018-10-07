@@ -1,6 +1,9 @@
 package kr.ac.kw.coms.landmarks.server
 
-import io.ktor.application.*
+import io.ktor.application.Application
+import io.ktor.application.call
+import io.ktor.application.install
+import io.ktor.application.log
 import io.ktor.features.*
 import io.ktor.gson.gson
 import io.ktor.http.HttpStatusCode
@@ -10,10 +13,11 @@ import io.ktor.response.respondText
 import io.ktor.routing.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
-import io.ktor.sessions.*
-import kr.ac.kw.coms.landmarks.client.PictureInfo
+import io.ktor.sessions.SessionStorageMemory
+import io.ktor.sessions.Sessions
+import io.ktor.sessions.cookie
+import kr.ac.kw.coms.landmarks.client.IdPictureInfo
 import kr.ac.kw.coms.landmarks.client.ServerFault
-import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.sql.Random
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -85,7 +89,7 @@ fun Route.problem() = route("/problem") {
 
   get("/random/{n}") { _ ->
     val n: Int = call.parameters["n"]?.toIntOrNull() ?: 1
-    val pics: List<WithIntId<PictureInfo>> = transaction {
+    val pics: List<IdPictureInfo> = transaction {
       val query = Pictures.selectAll().orderBy(Random()).limit(n)
       Picture.wrapRows(query).map { it.toIdPicture() }
     }

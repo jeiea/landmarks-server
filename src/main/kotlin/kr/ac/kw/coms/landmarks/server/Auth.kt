@@ -17,8 +17,8 @@ import io.ktor.sessions.get
 import io.ktor.sessions.sessions
 import io.ktor.sessions.set
 import kr.ac.kw.coms.landmarks.client.AccountForm
+import kr.ac.kw.coms.landmarks.client.IdAccountForm
 import kr.ac.kw.coms.landmarks.client.ServerOK
-import kr.ac.kw.coms.landmarks.client.WithIntId
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.select
@@ -108,8 +108,7 @@ fun Route.authentication() = route("/auth") {
       val target = Users.select { Users.verification eq verKey }.firstOrNull()
       if (target == null) {
         errorPage("invalid verification key")
-      }
-      else {
+      } else {
         Users.deleteWhere { Users.verification eq verKey }
       }
     }
@@ -132,7 +131,7 @@ fun Route.authentication() = route("/auth") {
     }
     call.sessions.set(LMSession(user.id.value))
     val info = AccountForm(user.login, email = user.email, nick = user.nick)
-    call.respond(WithIntId(user.id.value, info))
+    call.respond(IdAccountForm(user.id.value, info))
   }
 }
 

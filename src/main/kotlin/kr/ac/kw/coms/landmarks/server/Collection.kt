@@ -5,8 +5,7 @@ import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.routing.*
 import kr.ac.kw.coms.landmarks.client.CollectionInfo
-import kr.ac.kw.coms.landmarks.client.PictureInfo
-import kr.ac.kw.coms.landmarks.client.WithIntId
+import kr.ac.kw.coms.landmarks.client.IdPictureInfo
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.batchInsert
@@ -89,7 +88,7 @@ fun Routing.collection() = route("/collection") {
 
   get("/{id}/picture") { _ ->
     requireLogin()
-    val ar = mutableListOf<WithIntId<PictureInfo>>()
+    val ar = mutableListOf<IdPictureInfo>()
     val collectionId = EntityID(getParamId(call), Collections)
     ar.addAll(transaction {
       val coll = Collection.findById(collectionId) ?: notFoundPage()
