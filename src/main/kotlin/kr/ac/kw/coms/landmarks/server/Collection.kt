@@ -5,12 +5,8 @@ import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.routing.*
 import kr.ac.kw.coms.landmarks.client.CollectionInfo
-import kr.ac.kw.coms.landmarks.client.IdPictureInfo
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.batchInsert
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 
@@ -86,15 +82,19 @@ fun Routing.collection() = route("/collection") {
     call.respond(collection)
   }
 
-  get("/{id}/picture") { _ ->
+  get("/contains/picture/{id}") { _ ->
     requireLogin()
-    val ar = mutableListOf<IdPictureInfo>()
-    val collectionId = EntityID(getParamId(call), Collections)
-    ar.addAll(transaction {
-      val coll = Collection.findById(collectionId) ?: notFoundPage()
-      coll.pics.map { it.picture.toIdPicture() }
-    })
-    call.respond(ar)
+    val picId = EntityID(getParamId(call), Pictures)
+    val colls = transaction {
+      val matches: Query = CollectionPics
+        .innerJoin(Collections)
+        .select { CollectionPics.picture eq picId }
+      Collection
+        .wrapRows(matches)
+        .notForUpdate()
+        .map { it.toIdCollection() }
+    }
+    call.respond(colls)
   }
 
   get("/user/{id}") { _ ->

@@ -128,15 +128,15 @@ class RemoteSpek : Spek({
       createdCollId = queried[0].id
     }
 
+    blit("query collections by a picture") {
+      val colls = client.getCollectionsContainPicture(pics[0].id)
+      colls.size `should be equal to` 1
+    }
+
     blit("get random collections") {
       val queried = client.getRandomCollections()
       // it filters myself one
       queried.size `should be equal to` 0
-    }
-
-    blit("query collection picture info") {
-      val collPics = client.getCollectionPics(createdCollId)
-      collPics.size `should be equal to` pics.size
     }
 
     // Deletion of collection is not yet implemented

@@ -16,6 +16,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.experimental.channels.ArrayChannel
 import kotlinx.coroutines.experimental.channels.sendBlocking
 import kotlinx.coroutines.experimental.delay
+import kotlinx.coroutines.experimental.io.readUTF8LineTo
 import kotlinx.io.InputStream
 import kotlinx.io.core.writeFully
 import java.io.File
@@ -49,7 +50,14 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     if (response.status.isSuccess()) {
       return response.call.receive()
     }
-    throw response.call.receive<ServerFault>()
+    if (response.status == HttpStatusCode.BadRequest) {
+      throw response.call.receive<ServerFault>()
+    } else {
+      val sb = StringBuilder()
+      while (response.content.readUTF8LineTo(sb));
+      val msg = "${response.status}: ${sb}"
+      throw RuntimeException(msg)
+    }
   }
 
   private suspend inline fun <reified T> get(url: String, builder: HttpRequestBuilder.() -> Unit = {}): T =
@@ -205,6 +213,10 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
 
   suspend fun getMyCollections(): MutableList<IdCollectionInfo> {
     return getCollections(profile!!.id)
+  }
+
+  suspend fun getCollectionsContainPicture(picId: Int): MutableList<IdCollectionInfo> {
+    return get("$basePath/collection/contains/picture/$picId")
   }
 
   suspend fun modifyCollection(id: Int, collection: CollectionInfo): IdCollectionInfo {
