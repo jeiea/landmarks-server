@@ -213,6 +213,10 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return getPictureInfos(profile!!.id)
   }
 
+  suspend fun getAroundPictures(lat: Double, lon: Double, km: Double):
+    MutableList<IdPictureInfo> {
+    return get("$basePath/picture/near?lat=$lat&lon=$lon&km=$km")
+  }
 
   suspend fun uploadCollection(collection: ICollectionInfo): IdCollectionInfo {
     return put("$basePath/collection") {

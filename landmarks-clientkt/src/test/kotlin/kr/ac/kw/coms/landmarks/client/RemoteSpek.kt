@@ -100,6 +100,11 @@ class RemoteSpek : Spek({
       stream.readBytes().size `should be less than` 200000
     }
 
+    blit("query around pictures") {
+      val ps = client.getAroundPictures(0.0, 0.0, 1000.0)
+      ps.size `should be greater than` 0
+    }
+
     // Deletion of picture is not yet implemented.
 
     val collection = CollectionInfo(

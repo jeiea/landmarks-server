@@ -19,10 +19,7 @@ import kr.ac.kw.coms.landmarks.client.PictureInfo
 import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.sql.Op
-import org.jetbrains.exposed.sql.SqlExpressionBuilder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.or
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 import java.io.ByteArrayInputStream
@@ -149,11 +146,22 @@ fun Routing.picture() = route("/picture") {
     if (lon < -180 || 180 < lon) {
       errorPage("longitude out of range")
     }
-    transaction {
-//      Picture.find {
-//        getMaximalBound(GeoPoint(lat, lon), )
-//      }
+    val km = getDoubleParam(call, "km")
+    val roughs: SizedIterable<Picture> = transaction {
+      val bound: GeoBound = getMaximalBound(GeoPoint(lat, lon), km)
+      Picture.find {
+        val botCond = Pictures.latit greaterEq bound.b.toFloat()
+        val topCond = Pictures.latit lessEq bound.t.toFloat()
+        val leftCond =
+          (Pictures.longi greaterEq bound.l.toFloat()) or
+          (Pictures.longi greaterEq bound.l.toFloat() + 360)
+        val rightCond =
+          (Pictures.longi lessEq bound.r.toFloat()) or
+          (Pictures.longi lessEq bound.r.toFloat() - 360)
+        botCond and topCond and leftCond and rightCond
+      }.limit(10)
     }
+    call.respond(roughs.map(Picture::toIdPicture))
   }
 }
 
