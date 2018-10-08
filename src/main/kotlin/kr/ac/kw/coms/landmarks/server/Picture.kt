@@ -31,6 +31,20 @@ import java.io.File
 import java.sql.Blob
 import javax.imageio.ImageIO
 import javax.sql.rowset.serial.SerialBlob
+import kotlin.math.max
+import kotlin.math.min
+
+data class GeoPoint(
+  val lat: Double,
+  val lon: Double
+)
+
+data class GeoBound(
+  val l: Double,
+  val t: Double,
+  val r: Double,
+  val b: Double
+)
 
 fun Routing.picture() = route("/picture") {
 
@@ -124,6 +138,22 @@ fun Routing.picture() = route("/picture") {
       fitThumbnail.binaryStream.readBytes()
     }
     call.respondBytes(bytes)
+  }
+
+  get("/near") {
+    val lat = getDoubleParam(call, "lat")
+    if (lat < -90 || 90 < lat) {
+      errorPage("latitude out of range")
+    }
+    val lon = getDoubleParam(call, "lon")
+    if (lon < -180 || 180 < lon) {
+      errorPage("longitude out of range")
+    }
+    transaction {
+//      Picture.find {
+//        getMaximalBound(GeoPoint(lat, lon), )
+//      }
+    }
   }
 }
 
@@ -229,6 +259,41 @@ fun getLatLon(ar: ByteArray): Pair<Float, Float>? {
     ?.geoLocation?.run {
     Pair(latitude.toFloat(), longitude.toFloat())
   }
+}
+
+private val rad = Math::toRadians
+private val deg = Math::toDegrees
+private val cos = Math::cos
+private val sin = Math::sin
+// https://en.wikipedia.org/wiki/Great-circle_distance
+private val kmEarthRadius = 6371.0088
+
+private fun geoPointToRad(degree: GeoPoint): GeoPoint {
+  return GeoPoint(rad(degree.lat), rad(degree.lon))
+}
+
+private fun geoPointToDeg(radian: GeoPoint): GeoPoint {
+  return GeoPoint(deg(radian.lat), deg(radian.lon))
+}
+
+private fun geoPointDistanceKm(p1: GeoPoint, p2: GeoPoint): Double {
+  //http://www.mapanet.eu/en/resources/Script-Distance.htm
+  val (rLat1, rLon1) = geoPointToRad(p1)
+  val (rLat2, rLon2) = geoPointToRad(p2)
+  val dlon = rLon2 - rLon1
+  val distance = Math.acos(sin(rLat1) * sin(rLat2) +
+    cos(rLat1) * cos(rLat2) * cos(dlon)) * kmEarthRadius
+  return distance
+}
+
+fun getMaximalBound(degreePt: GeoPoint, kmRadius: Double): GeoBound {
+  val p = geoPointToRad(degreePt)
+  val coneAngle = kmRadius / kmEarthRadius
+  val lowerLimit = deg(max(rad(-90.0), p.lat - coneAngle))
+  val upperLimit = deg(min(rad(+90.0), p.lat + coneAngle))
+  val leftLimit = deg(p.lon - coneAngle)
+  val rightLimit = deg(p.lon + coneAngle)
+  return GeoBound(leftLimit, upperLimit, rightLimit, lowerLimit)
 }
 
 fun timeUidOriginalNameHash(path: String, userId: Int): String {
