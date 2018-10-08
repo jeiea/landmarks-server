@@ -62,7 +62,7 @@ data class PictureInfo(
 data class IdPictureInfo(
   override var id: Int,
   var data: PictureInfo
-): IntIdentifiable, IPictureInfo by data
+) : IntIdentifiable, IPictureInfo by data
 
 interface ICollectionInfo {
   var title: String?

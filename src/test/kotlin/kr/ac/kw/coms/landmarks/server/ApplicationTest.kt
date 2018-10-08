@@ -11,12 +11,14 @@ import io.ktor.client.engine.config
 import io.ktor.client.features.cookies.AcceptAllCookiesStorage
 import io.ktor.client.features.cookies.HttpCookies
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.formData
 import io.ktor.http.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.util.url
-import kotlinx.coroutines.experimental.io.jvm.javaio.toOutputStream
 import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.io.core.writeFully
 import kr.ac.kw.coms.landmarks.client.MultiPartContent
 import org.amshove.kluent.`should be`
 import org.amshove.kluent.`should contain`
@@ -129,14 +131,14 @@ class LandmarksSpek : Spek({
       val str: String = http.request {
         method = HttpMethod.Put
         url.takeFrom("$basePath/picture")
-        body = MultiPartContent.build {
-          add("lat", "3.3")
-          add("lon", "3.0")
-          add("address", "somewhere on earth")
-          add("pic1", filename = "coord0.jpg") {
-            File("coord0.jpg").inputStream().copyTo(toOutputStream())
+        body = MultiPartFormDataContent(formData {
+          append("lat", "3.3")
+          append("lon", "3.0")
+          append("address", "somewhere on earth")
+          append("pic0", "coord0.jpg") {
+            writeFully(File("coord0.jpg").inputStream().readBytes())
           }
-        }
+        })
       }
       str `should contain` "success"
     }
