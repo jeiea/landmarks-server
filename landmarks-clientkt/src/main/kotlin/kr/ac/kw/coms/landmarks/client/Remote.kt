@@ -31,7 +31,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
    */
 
   val http: HttpClient
-  val nominatimLastRequestMs = ArrayChannel<Long>(1)
+  private val nominatimLastRequestMs = ArrayChannel<Long>(1)
 
   companion object {
     const val herokuUri = "https://landmarks-coms.herokuapp.com"
@@ -40,7 +40,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
 
   var profile: IdAccountForm? = null
 
-  suspend inline fun <reified T> request(method: HttpMethod, url: String, builder: HttpRequestBuilder.() -> Unit = {}): T {
+  private suspend inline fun <reified T> request(method: HttpMethod, url: String, builder: HttpRequestBuilder.() -> Unit = {}): T {
     val response: HttpResponse = http.request {
       this.method = method
       url(url)
@@ -55,7 +55,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     } else {
       val sb = StringBuilder()
       while (response.content.readUTF8LineTo(sb));
-      val msg = "${response.status}: ${sb}"
+      val msg = "${response.status}: $sb"
       throw RuntimeException(msg)
     }
   }
@@ -143,7 +143,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return profile!!
   }
 
-  suspend fun uploadPicture(meta: PictureInfo, file: File): IdPictureInfo {
+  suspend fun uploadPicture(meta: IPictureInfo, file: File): IdPictureInfo {
     val filename: String = URLEncoder.encode(file.name, "UTF-8")
     val form = MultiPartFormDataContent(formData {
       meta.lat?.also { append("lat", it.toString()) }
@@ -162,7 +162,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return get("$basePath/problem/random/$n")
   }
 
-  suspend fun modifyPictureInfo(id: Int, info: PictureInfo) {
+  suspend fun modifyPictureInfo(id: Int, info: IPictureInfo) {
     return post("$basePath/picture/info/$id") {
       json(info)
     }
@@ -193,7 +193,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
   }
 
 
-  suspend fun uploadCollection(collection: CollectionInfo): IdCollectionInfo {
+  suspend fun uploadCollection(collection: ICollectionInfo): IdCollectionInfo {
     return put("$basePath/collection") {
       json(collection)
     }
@@ -219,8 +219,8 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
     return get("$basePath/collection/contains/picture/$picId")
   }
 
-  suspend fun modifyCollection(id: Int, collection: CollectionInfo): IdCollectionInfo {
-    return post("$basePath/collection/${id}") {
+  suspend fun modifyCollection(id: Int, collection: ICollectionInfo): IdCollectionInfo {
+    return post("$basePath/collection/$id") {
       json(collection)
     }
   }
