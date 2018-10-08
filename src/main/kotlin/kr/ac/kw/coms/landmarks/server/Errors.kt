@@ -24,8 +24,18 @@ fun errorPage(msg: String): Nothing {
   throw ValidException(msg)
 }
 
+fun requireParam(call: ApplicationCall, name: String): String {
+  return call.parameters[name] ?: errorPage("$name is not present")
+}
+
 fun getIntParam(call: ApplicationCall, name: String): Int {
-  return call.parameters[name]?.toIntOrNull() ?: errorPage("$name not valid")
+  return requireParam(call, name).toIntOrNull()
+    ?: errorPage("$name should be a integer")
+}
+
+fun getDoubleParam(call: ApplicationCall, name: String): Double {
+  return requireParam(call, name).toDoubleOrNull()
+    ?: errorPage("$name should be a real number")
 }
 
 fun getParamId(call: ApplicationCall): Int {
