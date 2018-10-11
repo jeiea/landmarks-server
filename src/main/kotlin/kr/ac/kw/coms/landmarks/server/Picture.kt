@@ -147,7 +147,7 @@ fun Routing.picture() = route("/picture") {
       errorPage("longitude out of range")
     }
     val km = getDoubleParam(call, "km")
-    val roughs: SizedIterable<Picture> = transaction {
+    val roughs: List<IdPictureInfo> = transaction {
       val bound: GeoBound = getMaximalBound(GeoPoint(lat, lon), km)
       Picture.find {
         val botCond = Pictures.latit greaterEq bound.b.toFloat()
@@ -159,9 +159,11 @@ fun Routing.picture() = route("/picture") {
           (Pictures.longi lessEq bound.r.toFloat()) or
           (Pictures.longi lessEq bound.r.toFloat() - 360)
         botCond and topCond and leftCond and rightCond
-      }.limit(10)
+      }
+        .limit(10)
+        .map(Picture::toIdPicture)
     }
-    call.respond(roughs.map(Picture::toIdPicture))
+    call.respond(roughs)
   }
 }
 
