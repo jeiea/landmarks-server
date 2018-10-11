@@ -1,7 +1,10 @@
 package kr.ac.kw.coms.landmarks.client
 
+import kotlinx.coroutines.experimental.Deferred
+import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.runBlocking
 import org.amshove.kluent.`should be equal to`
+import org.amshove.kluent.`should be greater than`
 import org.amshove.kluent.`should be true`
 import org.amshove.kluent.`should throw`
 import org.jetbrains.spek.api.Spek
@@ -16,8 +19,8 @@ import java.util.*
 class RemoteMultiSpek : Spek({
 
   fun newClient(): Remote {
-    return Remote(getTestClient(), "http://localhost:8080")
-//    return Remote(getTestClient(), "http://landmarks-coms.herokuapp.com/")
+//    return Remote(getTestClient(), "http://localhost:8080")
+    return Remote(getTestClient(), "http://landmarks-coms.herokuapp.com/")
   }
 
   val client = newClient()
@@ -90,25 +93,27 @@ class RemoteMultiSpek : Spek({
   val userPics = mutableListOf<MutableList<IdPictureInfo>>()
   describe("test picture features with multiple users") {
     blit("uploads pictures") {
-      val archive = File("../data/archive1")
+      val archive = File("../../landmarks-data/archive1")
       val catalog = archive.resolve("catalog.tsv").readText()
       val meta: List<List<String>> = catalog.split('\n').map { it.split('\t') }
-      var idx = 0
-      for (vs: List<String> in meta) {
+      val tasks = mutableListOf<Deferred<IdPictureInfo>>()
+      for ((idx: Int, vs: List<String>) in meta.withIndex()) {
         val file: File = archive.resolve(vs[0])
         val lat = vs[1].toFloat()
         val lon = vs[2].toFloat()
         val addr = file.nameWithoutExtension.replace('_', ' ')
         val info = PictureInfo(lat = lat, lon = lon, address = addr)
-        clients[idx % clients.size].uploadPicture(info, file)
-        idx++
+        tasks.add(async {
+          clients[idx % clients.size].uploadPicture(info, file)
+        })
       }
+      tasks.forEach { it.await() }
     }
 
     blit("test valid access") {
       clients.forEach {
         val pics = it.getMyPictureInfos()
-        pics.size `should be equal to` 5
+        pics.size `should be greater than` 7
         userPics.add(pics)
       }
     }

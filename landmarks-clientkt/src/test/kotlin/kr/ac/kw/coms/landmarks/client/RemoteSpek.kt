@@ -59,7 +59,7 @@ class RemoteSpek : Spek({
 
     val pics = mutableListOf<IdPictureInfo>()
     blit("uploads picture") {
-      val jpgs = File("../../landmarks-data/archive-unit").listFiles()
+      val jpgs = File("../../landmarks-data/archive0").listFiles()
       for ((idx, f) in jpgs.withIndex()) {
         val gps = idx.toFloat() * 3
         val info = PictureInfo(lat = gps, lon = gps, address = f.nameWithoutExtension)
@@ -120,10 +120,10 @@ class RemoteSpek : Spek({
     blit("modify collections") {
       collection.images = ArrayList(pics.map { it.id })
       coll = client.modifyCollection(coll!!.id, collection)
-      coll!!.previews!!.size `should be equal to` collection.images!!.size
+      coll!!.data.previews!!.size `should be equal to` collection.images!!.size
       collection.images!!.remove(0)
       coll = client.modifyCollection(coll!!.id, collection)
-      coll!!.images!!.size `should be equal to` collection.images!!.size
+      coll!!.data.images!!.size `should be equal to` collection.images!!.size
     }
 
     var createdCollId = 0
