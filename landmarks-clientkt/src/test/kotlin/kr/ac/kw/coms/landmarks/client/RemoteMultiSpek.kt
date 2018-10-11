@@ -146,7 +146,5 @@ class RemoteMultiSpek : Spek({
         coll.forEach { it.data.previews?.size!! `should be equal to` 8 }
       }
     }
-
   }
-
 })
