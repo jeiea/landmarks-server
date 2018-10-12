@@ -35,7 +35,7 @@ class Remote(base: HttpClient, val basePath: String = herokuUri) {
 
   private val nominatimLastRequestMs = Channel<Long>(1)
   private val problemBuffer by lazy {
-    GlobalScope.produce {
+    GlobalScope.produce(capacity = 4) {
       while (true) {
         val pics: MutableList<IdPictureInfo> = get("$basePath/problem/random/12")
         pics.forEach { send(it) }
