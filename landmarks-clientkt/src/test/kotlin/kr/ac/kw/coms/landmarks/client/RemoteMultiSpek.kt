@@ -1,8 +1,6 @@
 package kr.ac.kw.coms.landmarks.client
 
-import kotlinx.coroutines.experimental.Deferred
-import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.experimental.*
 import org.amshove.kluent.`should be equal to`
 import org.amshove.kluent.`should be greater than`
 import org.amshove.kluent.`should be true`
@@ -103,11 +101,11 @@ class RemoteMultiSpek : Spek({
         val lon = vs[2].toFloat()
         val addr = file.nameWithoutExtension.replace('_', ' ')
         val info = PictureInfo(lat = lat, lon = lon, address = addr)
-        tasks.add(async {
+        tasks.add(GlobalScope.async {
           clients[idx % clients.size].uploadPicture(info, file)
         })
       }
-      tasks.forEach { it.await() }
+      tasks.awaitAll()
     }
 
     blit("test valid access") {
