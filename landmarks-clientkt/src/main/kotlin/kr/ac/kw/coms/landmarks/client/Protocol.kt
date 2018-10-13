@@ -8,7 +8,7 @@ import java.util.*
 data class ServerFault(
   val error: String,
   val stacktrace: String? = null
-) : Throwable(error)
+) : Exception(error)
 
 data class ServerOK(val msg: String)
 
