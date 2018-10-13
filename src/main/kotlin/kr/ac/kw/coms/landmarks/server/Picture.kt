@@ -20,7 +20,7 @@ import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
+import kr.ac.kw.coms.landmarks.server.transaction
 import org.joda.time.DateTime
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream

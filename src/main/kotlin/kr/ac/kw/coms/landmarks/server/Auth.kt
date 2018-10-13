@@ -22,7 +22,7 @@ import kr.ac.kw.coms.landmarks.client.ServerOK
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.transactions.transaction
+import kr.ac.kw.coms.landmarks.server.transaction
 import java.security.MessageDigest
 import java.util.*
 import kotlin.streams.asSequence

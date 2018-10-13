@@ -22,7 +22,6 @@ import kr.ac.kw.coms.landmarks.client.IdPictureInfo
 import kr.ac.kw.coms.landmarks.client.ServerFault
 import org.jetbrains.exposed.sql.Random
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 import org.joda.time.Period
 import org.joda.time.format.PeriodFormatterBuilder
@@ -37,40 +36,6 @@ fun main(args: Array<String>) {
   server.start(wait = true)
 }
 
-//class Profiling(configuration: Configuration) {
-//  val prop = configuration.prop // get snapshot of config into immutable property
-//
-//  class Configuration {
-//    var prop = "value" // mutable property
-//  }
-//
-//  // implement ApplicationFeature in a companion object
-//  companion object Feature :
-//    ApplicationFeature<ApplicationCallPipeline, Profiling.Configuration, Profiling> {
-//    // create unique key for the feature
-//    override val key = AttributeKey<Profiling>("Profiling")
-//
-//    // implement installation script
-//    override fun install(
-//      pipeline: ApplicationCallPipeline,
-//      configure: Configuration.() -> Unit
-//    ): Profiling {
-//
-//      // run configuration script
-//      val configuration = Profiling.Configuration().apply(configure)
-//
-//      // create a feature
-//      val feature = Profiling(configuration)
-//
-//      // intercept a pipeline
-//      pipeline.intercept(Monitoring) {
-//        // call a feature
-//      }
-//      return feature
-//    }
-//  }
-//}
-
 val periodMinFormat = PeriodFormatterBuilder()
   .appendMinutes()
   .appendSuffix(":")
@@ -78,6 +43,7 @@ val periodMinFormat = PeriodFormatterBuilder()
   .appendSeconds()
   .appendPrefix(".")
   .appendMillis3Digit()
+  .appendSuffix("s")
   .toFormatter()
 
 fun Application.landmarksServer() {
