@@ -1,5 +1,6 @@
 package kr.ac.kw.coms.landmarks.server
 
+import ch.qos.logback.classic.Level
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import kr.ac.kw.coms.landmarks.client.CollectionInfo
@@ -13,9 +14,13 @@ import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.SchemaUtils.drop
+import org.jetbrains.exposed.sql.Transaction
+import org.jetbrains.exposed.sql.exposedLogger
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.joda.time.DateTime
+import org.joda.time.Period
 import java.sql.Connection
 
 object Users : IntIdTable() {
@@ -126,7 +131,8 @@ class Collection(id: EntityID<Int>) : IntEntity(id) {
       title, description,
       ArrayList(pics.map { it.picture.id.value }),
       ArrayList(pics.map { it.picture.toIdPicture() }),
-      likeNum, liking, isRoute, isPublic, parent?.value)
+      likeNum, liking, isRoute, isPublic, parent?.value
+    )
     return IdCollectionInfo(id.value, collection)
   }
 }
@@ -147,6 +153,7 @@ fun dbInitialize() {
     cfg.jdbcUrl = "jdbc:sqlite:landmarks.sqlite3"
   }
 
+  setLoggingLevel(Level.WARN, "com.zaxxer.hikari")
   val dataSource = HikariDataSource(cfg)
   Database.connect(dataSource)
 
@@ -156,6 +163,20 @@ fun dbInitialize() {
   }
 
   createTables()
+}
+
+fun <T> transaction(db: Database? = null, statement: Transaction.() -> T): T {
+  val beg = DateTime.now()
+  val ret = transaction(TransactionManager.manager.defaultIsolationLevel, 3, db, statement)
+  val dur = Period(DateTime.now().millis - beg.millis)
+  val period = periodMinFormat.print(dur)
+  exposedLogger.info("transaction taken $period")
+  return ret
+}
+
+fun setLoggingLevel(level: ch.qos.logback.classic.Level, target: String) {
+  val root = org.slf4j.LoggerFactory.getLogger(target) as ch.qos.logback.classic.Logger
+  root.level = level
 }
 
 fun createTables() {
