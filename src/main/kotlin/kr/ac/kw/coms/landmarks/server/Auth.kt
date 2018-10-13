@@ -86,13 +86,13 @@ fun Route.authentication() = route("/auth") {
       if (!msg.contains("constraint failed")) {
         throw e
       }
-      val guide: String = when {
+      val guide = when {
         msg.contains("login") -> "Already exising id"
         msg.contains("nick") -> "Already exising nick"
         msg.contains("email") -> "Already exising email"
         else -> throw e
       }
-      throw ValidException(guide)
+      errorPage(guide)
     }
 
     call.respond(ServerOK("success"))

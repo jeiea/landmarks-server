@@ -19,7 +19,6 @@ import io.ktor.server.netty.Netty
 import io.ktor.util.url
 import kotlinx.coroutines.experimental.runBlocking
 import kotlinx.io.core.writeFully
-import kr.ac.kw.coms.landmarks.client.MultiPartContent
 import org.amshove.kluent.`should be`
 import org.amshove.kluent.`should contain`
 import org.apache.http.HttpHost

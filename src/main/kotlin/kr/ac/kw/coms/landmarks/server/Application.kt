@@ -88,6 +88,7 @@ fun Route.problem() = route("/problem") {
   put("/") { _ -> }
 
   get("/random/{n}") { _ ->
+    requireLogin()
     val n: Int = call.parameters["n"]?.toIntOrNull() ?: 1
     val pics: List<IdPictureInfo> = transaction {
       val query = Pictures.selectAll().orderBy(Random()).limit(n)
