@@ -17,10 +17,13 @@ import kotlinx.coroutines.experimental.runBlocking
 import kr.ac.kw.coms.landmarks.client.IdPictureInfo
 import kr.ac.kw.coms.landmarks.client.PictureInfo
 import kr.ac.kw.coms.landmarks.client.copyToSuspend
+import kr.ac.kw.coms.landmarks.client.getThumbnailLevel
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.sql.*
-import kr.ac.kw.coms.landmarks.server.transaction
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.SqlExpressionBuilder
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.or
 import org.joda.time.DateTime
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -154,10 +157,10 @@ fun Routing.picture() = route("/picture") {
         val topCond = Pictures.latit lessEq bound.t.toFloat()
         val leftCond =
           (Pictures.longi greaterEq bound.l.toFloat()) or
-          (Pictures.longi greaterEq bound.l.toFloat() + 360)
+            (Pictures.longi greaterEq bound.l.toFloat() + 360)
         val rightCond =
           (Pictures.longi lessEq bound.r.toFloat()) or
-          (Pictures.longi lessEq bound.r.toFloat() - 360)
+            (Pictures.longi lessEq bound.r.toFloat() - 360)
         botCond and topCond and leftCond and rightCond
       }
         .limit(10)
@@ -167,21 +170,6 @@ fun Routing.picture() = route("/picture") {
   }
 }
 
-private fun getThumbnailLevel(
-  picWidth: Int, picHeight: Int,
-  desireWidth: Int, desireHeight: Int): Int {
-
-  var width = picWidth
-  var height = picHeight
-  for (i in 0..3) {
-    width /= 2
-    height /= 2
-    if (width < desireWidth || height < desireHeight) {
-      return i
-    }
-  }
-  return 4
-}
 
 fun SqlExpressionBuilder.isGrantedTo(userId: Int): Op<Boolean> {
   return (Pictures.isPublic eq true) or (Pictures.owner eq userId)
@@ -291,8 +279,10 @@ private fun geoPointDistanceKm(p1: GeoPoint, p2: GeoPoint): Double {
   val (rLat1, rLon1) = geoPointToRad(p1)
   val (rLat2, rLon2) = geoPointToRad(p2)
   val dlon = rLon2 - rLon1
-  val distance = Math.acos(sin(rLat1) * sin(rLat2) +
-    cos(rLat1) * cos(rLat2) * cos(dlon)) * kmEarthRadius
+  val distance = Math.acos(
+    sin(rLat1) * sin(rLat2) +
+      cos(rLat1) * cos(rLat2) * cos(dlon)
+  ) * kmEarthRadius
   return distance
 }
 
