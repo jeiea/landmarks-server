@@ -101,6 +101,10 @@ class RemoteSpek : Spek({
       ps.size `should be greater than` 0
     }
 
+    blit("delete my picture") {
+      client.deletePicture(pics.last().id)
+    }
+
     // Deletion of picture is not yet implemented.
 
     val collection = CollectionInfo(
