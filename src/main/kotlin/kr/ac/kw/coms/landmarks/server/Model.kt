@@ -43,8 +43,8 @@ object Pictures : IntIdTable() {
   val thumbnail4 = blob("thumbnail4")
   val owner = entityId("owner", Users).references(Users.id)
   val address = varchar("address", 50).nullable()
-  val latit = float("latit").nullable()
-  val longi = float("longi").nullable()
+  val latit = double("latit").nullable()
+  val longi = double("longi").nullable()
   val created = datetime("created")
   val isPublic = bool("public")
 }

@@ -153,14 +153,15 @@ fun Routing.picture() = route("/picture") {
     val roughs: List<IdPictureInfo> = transaction {
       val bound: GeoBound = getMaximalBound(GeoPoint(lat, lon), km)
       Picture.find {
-        val botCond = Pictures.latit greaterEq bound.b.toFloat()
-        val topCond = Pictures.latit lessEq bound.t.toFloat()
+        val botCond = Pictures.latit greaterEq bound.b
+        val topCond = Pictures.latit lessEq bound.t
+        val centerCond = (Pictures.longi greaterEq bound.l)
         val leftCond =
-          (Pictures.longi greaterEq bound.l.toFloat()) or
-            (Pictures.longi greaterEq bound.l.toFloat() + 360)
+          (Pictures.longi greaterEq bound.l) or
+            (Pictures.longi greaterEq bound.l + 360)
         val rightCond =
-          (Pictures.longi lessEq bound.r.toFloat()) or
-            (Pictures.longi lessEq bound.r.toFloat() - 360)
+          (Pictures.longi lessEq bound.r) or
+            (Pictures.longi lessEq bound.r - 360)
         botCond and topCond and leftCond and rightCond
       }
         .limit(10)
@@ -201,11 +202,11 @@ fun fillFormField(record: Picture, part: PartData.FormItem) {
   when (part.name) {
     "lat" -> {
       if (record.latit != null) return
-      record.latit = part.value.toFloatOrNull() ?: return
+      record.latit = part.value.toDoubleOrNull() ?: return
     }
     "lon" -> {
       if (record.longi != null) return
-      record.longi = part.value.toFloatOrNull() ?: return
+      record.longi = part.value.toDoubleOrNull() ?: return
     }
     "address" -> {
       record.address = part.value
@@ -250,12 +251,12 @@ suspend fun receivePictureFile(record: Picture, part: PartData.FileItem, userId:
   }
 }
 
-fun getLatLon(ar: ByteArray): Pair<Float, Float>? {
+fun getLatLon(ar: ByteArray): Pair<Double, Double>? {
   return ImageMetadataReader
     .readMetadata(ByteArrayInputStream(ar))
     .getFirstDirectoryOfType(GpsDirectory::class.java)
     ?.geoLocation?.run {
-    Pair(latitude.toFloat(), longitude.toFloat())
+    Pair(latitude, longitude)
   }
 }
 
