@@ -117,6 +117,21 @@ fun Routing.picture() = route("/picture") {
     }
   }
 
+  delete("/{id}") { _ ->
+    val id: Int = getParamId(call)
+    val userId: Int = requireLogin().userId
+    transaction {
+      val pic = Picture.findById(id) ?: notFoundPage()
+      if (pic.owner.value == userId) {
+        pic.delete()
+      }
+      else {
+        errorPage("Not permitted")
+      }
+    }
+    call.respond("")
+  }
+
   get("/thumbnail/{id}") {
     val id: Int = getParamId(call)
     val desireWidth: Int = getIntParam(call, "width")

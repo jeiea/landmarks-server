@@ -11,12 +11,9 @@ import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
-import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.SchemaUtils.drop
-import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.exposedLogger
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
@@ -60,13 +57,13 @@ object Collections : IntIdTable() {
 }
 
 object CollectionPics : IntIdTable() {
-  val collection = reference("collection", Collections)
-  val picture = reference("picture", Pictures)
+  val collection = reference("collection", Collections, ReferenceOption.CASCADE)
+  val picture = reference("picture", Pictures, ReferenceOption.CASCADE)
 }
 
 object CollectionLikes : IntIdTable() {
-  val collection = reference("collection", Collections)
-  val liker = reference("liker", Users)
+  val collection = reference("collection", Collections, ReferenceOption.CASCADE)
+  val liker = reference("liker", Users, ReferenceOption.CASCADE)
 }
 
 class User(id: EntityID<Int>) : IntEntity(id) {

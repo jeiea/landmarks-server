@@ -279,6 +279,6 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
   }
 
   suspend fun deleteCollection(id: Int) {
-    TODO()
+    return delete("$basePath/collection/$id")
   }
 }

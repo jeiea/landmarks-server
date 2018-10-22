@@ -103,9 +103,8 @@ class RemoteSpek : Spek({
 
     blit("delete my picture") {
       client.deletePicture(pics.last().id)
+      pics.remove(pics.last())
     }
-
-    // Deletion of picture is not yet implemented.
 
     val collection = CollectionInfo(
       title = "first diary",
@@ -125,18 +124,19 @@ class RemoteSpek : Spek({
       coll!!.data.images!!.size `should be equal to` collection.images!!.size
     }
 
+    lateinit var colls: List<IdCollectionInfo>
     blit("query my collections") {
-      val queried = client.getMyCollections()
-      queried.size `should be equal to` 1
+      colls = client.getMyCollections()
+      colls.size `should be equal to` 1
 
-      val collGot: CollectionInfo = queried[0].data
+      val collGot: CollectionInfo = colls[0].data
       collGot.images!! `should equal` collection.images!!
       collGot.previews!!.size `should be equal to` collection.images!!.size
     }
 
     blit("query collections by a picture") {
-      val colls = client.getCollectionsContainPicture(pics[0].id)
-      colls.size `should be equal to` 1
+      val randoms = client.getCollectionsContainPicture(pics[0].id)
+      randoms.size `should be equal to` 1
     }
 
     blit("get random collections") {
@@ -145,7 +145,9 @@ class RemoteSpek : Spek({
       queried.size `should be equal to` 0
     }
 
-    // Deletion of collection is not yet implemented
+    blit("delete my collection") {
+      client.deleteCollection(colls[0].id)
+    }
   }
 })
 

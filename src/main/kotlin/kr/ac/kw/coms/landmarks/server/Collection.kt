@@ -7,7 +7,6 @@ import io.ktor.routing.*
 import kr.ac.kw.coms.landmarks.client.CollectionInfo
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.sql.*
-import kr.ac.kw.coms.landmarks.server.transaction
 import org.joda.time.DateTime
 
 fun Routing.collection() = route("/collection") {
@@ -80,6 +79,21 @@ fun Routing.collection() = route("/collection") {
       col.toIdCollection()
     }
     call.respond(collection)
+  }
+
+  delete("/{id}") { _ ->
+    val userId: EntityID<Int> = EntityID(requireLogin().userId, Users)
+    val colId: EntityID<Int> = EntityID(getParamId(call), Collections)
+
+    transaction {
+      val col: Collection = Collection.findById(colId) ?: notFoundPage()
+      if (col.owner == userId) {
+        col.delete()
+      } else {
+        errorPage("Not permitted")
+      }
+    }
+    call.respond("")
   }
 
   get("/contains/picture/{id}") { _ ->
