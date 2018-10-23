@@ -20,10 +20,7 @@ import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import kr.ac.kw.coms.landmarks.client.getThumbnailLevel
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.sql.Op
-import org.jetbrains.exposed.sql.SqlExpressionBuilder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.or
+import org.jetbrains.exposed.sql.*
 import org.joda.time.DateTime
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -170,14 +167,11 @@ fun Routing.picture() = route("/picture") {
       Picture.find {
         val botCond = Pictures.latit greaterEq bound.b
         val topCond = Pictures.latit lessEq bound.t
-        val centerCond = (Pictures.longi greaterEq bound.l)
-        val leftCond =
-          (Pictures.longi greaterEq bound.l) or
-            (Pictures.longi greaterEq bound.l + 360)
-        val rightCond =
-          (Pictures.longi lessEq bound.r) or
-            (Pictures.longi lessEq bound.r - 360)
-        botCond and topCond and leftCond and rightCond
+        // TODO: case over -180 and 180
+        val centerCond =
+          (Pictures.longi greaterEq bound.l) and
+          (Pictures.longi lessEq bound.r)
+        botCond and topCond and centerCond
       }
         .limit(10)
         .map(Picture::toIdPicture)
