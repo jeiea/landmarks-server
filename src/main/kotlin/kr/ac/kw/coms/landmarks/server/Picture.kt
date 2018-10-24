@@ -54,7 +54,20 @@ fun Routing.picture() = route("/picture") {
     val sess: LMSession = requireLogin()
     val pic: IdPictureInfo = transaction {
       val uid = EntityID(sess.userId, Users)
-      insertPicture(parts, uid).toIdPicture()
+      val new = insertPicture(parts, uid)
+      val dups = Picture.find {
+        val hashEq = Pictures.hash eq new.hash
+        val recent = Pictures.created greater new.created.minusMinutes(1)
+        val notSelf = Pictures.id neq new.id
+        hashEq and recent and notSelf
+      }
+      if (dups.count() > 0) {
+        rollback()
+        dups.first()
+      }
+      else {
+        new
+      }.toIdPicture()
     }
     call.respond(pic)
   }
