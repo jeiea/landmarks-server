@@ -183,7 +183,7 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
         writeFully(file.readBytes())
       }
     })
-    return put("$basePath/picture") {
+    return post("$basePath/picture") {
       body = form
     }
   }

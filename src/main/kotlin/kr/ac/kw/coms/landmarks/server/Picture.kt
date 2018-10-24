@@ -49,7 +49,7 @@ data class GeoBound(
 
 fun Routing.picture() = route("/picture") {
 
-  put("/") {
+  post("/") {
     val parts: MultiPartData = call.receiveMultipart()
     val sess: LMSession = requireLogin()
     val pic: IdPictureInfo = transaction {
