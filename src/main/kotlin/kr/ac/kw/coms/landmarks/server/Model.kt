@@ -30,7 +30,7 @@ object Users : IntIdTable() {
 }
 
 object Pictures : IntIdTable() {
-  val filename = varchar("filename", 128)
+  val hash = binary("hash", 32)
   val file = blob("file")
   val width = integer("width")
   val height = integer("height")
@@ -79,8 +79,7 @@ class User(id: EntityID<Int>) : IntEntity(id) {
 
 class Picture(id: EntityID<Int>) : IntEntity(id) {
   companion object : IntEntityClass<Picture>(Pictures)
-
-  var filename by Pictures.filename
+  var hash by Pictures.hash
   var file by Pictures.file
   var width by Pictures.width
   var height by Pictures.height

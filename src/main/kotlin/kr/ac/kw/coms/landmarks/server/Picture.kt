@@ -20,16 +20,20 @@ import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import kr.ac.kw.coms.landmarks.client.getThumbnailLevel
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.Op
+import org.jetbrains.exposed.sql.SqlExpressionBuilder
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.or
 import org.joda.time.DateTime
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.File
+import java.security.MessageDigest
 import java.sql.Blob
 import javax.imageio.ImageIO
 import javax.sql.rowset.serial.SerialBlob
 import kotlin.math.max
 import kotlin.math.min
+
 
 data class GeoPoint(
   val lat: Double,
@@ -88,7 +92,8 @@ fun Routing.picture() = route("/picture") {
     }
     if (pic == null || pic.data.run { uid != userId && isPublic }) {
       call.respond(HttpStatusCode.NotFound)
-    } else {
+    }
+    else {
       call.respond(pic.data)
     }
   }
@@ -109,7 +114,8 @@ fun Routing.picture() = route("/picture") {
     }
     if (pic == null || pic.data.run { uid != userId && isPublic }) {
       call.respond(HttpStatusCode.NotFound)
-    } else {
+    }
+    else {
       call.respond(pic.data)
     }
   }
@@ -170,7 +176,7 @@ fun Routing.picture() = route("/picture") {
         // TODO: case over -180 and 180
         val centerCond =
           (Pictures.longi greaterEq bound.l) and
-          (Pictures.longi lessEq bound.r)
+            (Pictures.longi lessEq bound.r)
         botCond and topCond and centerCond
       }
         .limit(10)
@@ -190,17 +196,15 @@ fun insertPicture(parts: MultiPartData, uid: EntityID<Int>): Picture {
     owner = uid
     public = true
     runBlocking {
-      parts.forEachPart(assemblePicture(this@new, uid.value))
+      parts.forEachPart(assemblePicture(this@new))
     }
   }
 }
 
-private fun assemblePicture(record: Picture, userId: Int):
-  suspend (PartData) -> Unit = fld@{ part ->
-
+private fun assemblePicture(record: Picture): suspend (PartData) -> Unit = fld@{ part ->
   when (part) {
     is PartData.FormItem -> fillFormField(record, part)
-    is PartData.FileItem -> receivePictureFile(record, part, userId)
+    is PartData.FileItem -> receivePictureFile(record, part)
   }
   record.created = DateTime.now()
 
@@ -226,13 +230,13 @@ fun fillFormField(record: Picture, part: PartData.FormItem) {
   }
 }
 
-suspend fun receivePictureFile(record: Picture, part: PartData.FileItem, userId: Int) {
-  record.filename = timeUidOriginalNameHash(part.originalFileName!!, userId)
-
+suspend fun receivePictureFile(record: Picture, part: PartData.FileItem) {
   ByteArrayOutputStream().use { buffer ->
     part.streamProvider().use { it.copyToSuspend(buffer) }
     val ar = buffer.toByteArray()
     record.file = SerialBlob(ar)
+    val digest = MessageDigest.getInstance("SHA-256")
+    record.hash = digest.digest(ar)
 
     ar.inputStream().use {
       val img = ImageIO.read(ar.inputStream())
@@ -304,13 +308,4 @@ fun getMaximalBound(degreePt: GeoPoint, kmRadius: Double): GeoBound {
   val leftLimit = deg(p.lon - coneAngle)
   val rightLimit = deg(p.lon + coneAngle)
   return GeoBound(leftLimit, upperLimit, rightLimit, lowerLimit)
-}
-
-fun timeUidOriginalNameHash(path: String, userId: Int): String {
-  val name = File(path)
-  val time = System.currentTimeMillis()
-  val uid = userId.hashCode()
-  val hash = path.hashCode()
-  val ext = name.extension
-  return "$time-$uid-$hash.$ext"
 }
