@@ -93,7 +93,7 @@ fun Routing.picture() = route("/picture") {
     }
   }
 
-  post("/info/{id}") { _ ->
+  put("/info/{id}") { _ ->
     val id: Int = getParamId(call)
     val userId: Int = requireLogin().userId
     val info: PictureInfo = call.receive()

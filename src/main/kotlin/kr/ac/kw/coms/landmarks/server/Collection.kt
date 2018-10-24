@@ -22,7 +22,7 @@ fun Routing.collection() = route("/collection") {
     call.respond(colls)
   }
 
-  put("/{id?}") { _ ->
+  post("/{id?}") { _ ->
     val parentId = call.parameters["id"]?.toInt()
     val sessId = requireLogin().userId
     val json: CollectionInfo = call.receive()
@@ -47,7 +47,7 @@ fun Routing.collection() = route("/collection") {
     call.respond(collection)
   }
 
-  post("/{id}") { _ ->
+  put("/{id}") { _ ->
     val userId: EntityID<Int> = EntityID(requireLogin().userId, Users)
     val colId: EntityID<Int> = EntityID(getParamId(call), Collections)
     val json: CollectionInfo = call.receive()
