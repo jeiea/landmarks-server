@@ -113,14 +113,17 @@ fun Route.problem() = route("/problem") {
   // Incomplete. There is no use at this time.
   put("/") { _ -> }
 
-  get("/random/{n}") { _ ->
+  get("/random") { _ ->
     requireLogin()
-    val n: Int = call.parameters["n"]?.toIntOrNull() ?: 1
+    val n = call.parameters["n"]?.toIntOrNull() ?: 1
+    val seed = call.parameters["seed"]?.toIntOrNull() ?: DateTime.now().millis.toInt()
+    val skip = call.parameters["skip"]?.toIntOrNull() ?: 0
     val pics: List<IdPictureInfo> = transaction {
-      val query = Pictures.selectAll().orderBy(Random()).limit(n)
+      val cnt: Int = Pictures.selectAll().count()
+      val rand = Random(seed + skip / cnt)
+      val query = Pictures.selectAll().orderBy(rand).limit(n, offset = skip % cnt)
       Picture.wrapRows(query).map { it.toIdPicture() }
     }
     call.respond(pics)
   }
 }
-
