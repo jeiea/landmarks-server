@@ -40,12 +40,8 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
   var profile: IdAccountForm? = null
   val problemBuffer by RecoverableChannel {
     GlobalScope.produce(Dispatchers.IO) {
-      val r = Random()
-      var cnt = 0
       while (true) {
-        val pics: MutableList<IdPictureInfo> =
-          get("$basePath/problem/random?seed=${r.nextInt()}&n=12&skip=$cnt")
-        cnt += pics.size
+        val pics: MutableList<IdPictureInfo> = get("$basePath/picture/random")
         pics.forEach { send(it) }
       }
     }
@@ -255,10 +251,6 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
 
   suspend fun getCollections(ownerId: Int): MutableList<IdCollectionInfo> {
     return get("$basePath/collection/user/$ownerId")
-  }
-
-  suspend fun getCollectionPics(collectionId: Int): MutableList<IdPictureInfo> {
-    return get("$basePath/collection/$collectionId/picture")
   }
 
   suspend fun getMyCollections(): MutableList<IdCollectionInfo> {

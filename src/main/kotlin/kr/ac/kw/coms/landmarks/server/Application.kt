@@ -11,17 +11,17 @@ import io.ktor.locations.Locations
 import io.ktor.request.uri
 import io.ktor.response.respond
 import io.ktor.response.respondText
-import io.ktor.routing.*
+import io.ktor.routing.Routing
+import io.ktor.routing.get
+import io.ktor.routing.put
+import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.SessionStorageMemory
 import io.ktor.sessions.Sessions
 import io.ktor.sessions.cookie
 import io.ktor.util.AttributeKey
-import kr.ac.kw.coms.landmarks.client.IdPictureInfo
 import kr.ac.kw.coms.landmarks.client.ServerFault
-import org.jetbrains.exposed.sql.Random
-import org.jetbrains.exposed.sql.selectAll
 import org.joda.time.DateTime
 import org.joda.time.Period
 import org.joda.time.format.PeriodFormatterBuilder
@@ -47,9 +47,13 @@ val periodMinFormat = PeriodFormatterBuilder()
   .toFormatter()
 
 fun Application.landmarksServer() {
-  install(CallLogging) {
+  install(CallLogging)
+  install(Compression) {
+    gzip {
+      priority = 1.0
+      minimumSize(1024)
+    }
   }
-  install(Compression)
   install(ConditionalHeaders)
   install(DefaultHeaders)
   install(Locations)
@@ -105,25 +109,5 @@ fun Application.landmarksServer() {
     authentication()
     picture()
     collection()
-    problem()
-  }
-}
-
-fun Route.problem() = route("/problem") {
-  // Incomplete. There is no use at this time.
-  put("/") { _ -> }
-
-  get("/random") { _ ->
-    requireLogin()
-    val n = call.parameters["n"]?.toIntOrNull() ?: 1
-    val seed = call.parameters["seed"]?.toIntOrNull() ?: DateTime.now().millis.toInt()
-    val skip = call.parameters["skip"]?.toIntOrNull() ?: 0
-    val pics: List<IdPictureInfo> = transaction {
-      val cnt: Int = Pictures.selectAll().count()
-      val rand = Random(seed + skip / cnt)
-      val query = Pictures.selectAll().orderBy(rand).limit(n, offset = skip % cnt)
-      Picture.wrapRows(query).map { it.toIdPicture() }
-    }
-    call.respond(pics)
   }
 }

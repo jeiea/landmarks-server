@@ -87,7 +87,7 @@ class RemoteSpek : Spek({
 
     blit("receives quiz info") {
       val quizs = mutableListOf<IdPictureInfo>()
-      quizs.addAll(client.getRandomProblems(2))
+      quizs.addAll(client.getRandomPictures(2))
       quizs[0].id `should not be equal to` quizs[1].id
     }
 

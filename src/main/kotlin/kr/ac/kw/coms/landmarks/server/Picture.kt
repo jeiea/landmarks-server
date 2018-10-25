@@ -20,10 +20,7 @@ import kr.ac.kw.coms.landmarks.client.copyToSuspend
 import kr.ac.kw.coms.landmarks.client.getThumbnailLevel
 import net.coobird.thumbnailator.Thumbnails
 import org.jetbrains.exposed.dao.EntityID
-import org.jetbrains.exposed.sql.Op
-import org.jetbrains.exposed.sql.SqlExpressionBuilder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.or
+import org.jetbrains.exposed.sql.*
 import org.joda.time.DateTime
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -31,6 +28,7 @@ import java.security.MessageDigest
 import java.sql.Blob
 import javax.imageio.ImageIO
 import javax.sql.rowset.serial.SerialBlob
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -48,6 +46,18 @@ data class GeoBound(
 )
 
 fun Routing.picture() = route("/picture") {
+
+  get("/") { _ ->
+    requireLogin()
+    val n = abs(call.parameters["n"]?.toIntOrNull() ?: 1)
+    val skip = abs(call.parameters["skip"]?.toIntOrNull() ?: 0)
+    val pics: List<IdPictureInfo> = transaction {
+      Picture.find {
+        Pictures.isPublic eq true
+      }.limit(n, skip).map(Picture::toIdPicture)
+    }
+    call.respond(pics)
+  }
 
   post("/") {
     val parts: MultiPartData = call.receiveMultipart()
@@ -70,6 +80,17 @@ fun Routing.picture() = route("/picture") {
       }.toIdPicture()
     }
     call.respond(pic)
+  }
+
+
+  get("/random") { _ ->
+    requireLogin()
+    val n = abs(call.parameters["n"]?.toIntOrNull() ?: 1)
+    val pics: List<IdPictureInfo> = transaction {
+      val query = Pictures.selectAll().orderBy(Random()).limit(n)
+      Picture.wrapRows(query).map { it.toIdPicture() }
+    }
+    call.respond(pics)
   }
 
   get("/user/{id}") { _ ->
@@ -291,7 +312,7 @@ private val deg = Math::toDegrees
 private val cos = Math::cos
 private val sin = Math::sin
 // https://en.wikipedia.org/wiki/Great-circle_distance
-private val kmEarthRadius = 6371.0088
+private const val kmEarthRadius = 6371.0088
 
 private fun geoPointToRad(degree: GeoPoint): GeoPoint {
   return GeoPoint(rad(degree.lat), rad(degree.lon))
