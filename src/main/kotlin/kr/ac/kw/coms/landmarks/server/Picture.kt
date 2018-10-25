@@ -4,6 +4,7 @@ import com.drew.imaging.ImageMetadataReader
 import com.drew.metadata.exif.GpsDirectory
 import io.ktor.application.call
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.Parameters
 import io.ktor.http.content.MultiPartData
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
@@ -48,13 +49,12 @@ data class GeoBound(
 fun Routing.picture() = route("/picture") {
 
   get("/") { _ ->
-    requireLogin()
-    val n = abs(call.parameters["n"]?.toIntOrNull() ?: 1)
-    val skip = abs(call.parameters["skip"]?.toIntOrNull() ?: 0)
+    val callerId = requireLogin().userId
     val pics: List<IdPictureInfo> = transaction {
-      Picture.find {
-        Pictures.isPublic eq true
-      }.limit(n, skip).map(Picture::toIdPicture)
+      val ps = Picture.find {
+        isGrantedTo(callerId) and executePictureQuery(call.parameters)
+      }
+      sizeQuery(call.parameters, ps).map(Picture::toIdPicture)
     }
     call.respond(pics)
   }
@@ -91,18 +91,6 @@ fun Routing.picture() = route("/picture") {
       Picture.wrapRows(query).map { it.toIdPicture() }
     }
     call.respond(pics)
-  }
-
-  get("/user/{id}") { _ ->
-    val ar = mutableListOf<IdPictureInfo>()
-    val calleeId: Int = getParamId(call)
-    val callerId: Int = requireLogin().userId
-    ar.addAll(transaction {
-      Picture.find {
-        isGrantedTo(callerId) and (Pictures.owner eq calleeId)
-      }.map(Picture::toIdPicture)
-    })
-    call.respond(ar)
   }
 
   get("/{id}") {
@@ -191,38 +179,51 @@ fun Routing.picture() = route("/picture") {
     }
     call.respondBytes(bytes)
   }
+}
 
-  get("/near") {
-    val lat = getDoubleParam(call, "lat")
-    if (lat < -90 || 90 < lat) {
-      errorPage("latitude out of range")
+private fun distanceOp(lat: Double, lon: Double, km: Double): Op<Boolean> {
+  if (lat < -90 || 90 < lat) {
+    errorPage("latitude out of range")
+  }
+  if (lon < -180 || 180 < lon) {
+    errorPage("longitude out of range")
+  }
+  val bound: GeoBound = getMaximalBound(GeoPoint(lat, lon), km)
+  val botCond = Op.build { Pictures.latit greaterEq bound.b }
+  val topCond = Op.build { Pictures.latit lessEq bound.t }
+  // TODO: case over -180 and 180
+  val centerCond = Op.build {
+    (Pictures.longi greaterEq bound.l) and (Pictures.longi lessEq bound.r)
+  }
+  return botCond and topCond and centerCond
+}
+
+private fun executePictureQuery(params: Parameters): Op<Boolean> {
+  val lat = params["lat"]?.toDoubleOrNull()
+  val lon = params["lon"]?.toDoubleOrNull()
+  val km = params["km"]?.toDoubleOrNull()
+
+  return Op.build {
+    var op = Op.build { booleanLiteral(true) eq booleanLiteral(true) }
+    params["uid"]?.toIntOrNull()
+      ?.also { uid -> op = Pictures.owner eq EntityID(uid, Users) and op }
+    params["not_uid"]?.toIntOrNull()
+      ?.also { nuid -> op = Pictures.owner neq EntityID(nuid, Users) and op }
+    if (lat != null && lon != null && km != null) {
+      op = distanceOp(lat, lon, km) and op
     }
-    val lon = getDoubleParam(call, "lon")
-    if (lon < -180 || 180 < lon) {
-      errorPage("longitude out of range")
-    }
-    val km = getDoubleParam(call, "km")
-    val roughs: List<IdPictureInfo> = transaction {
-      val bound: GeoBound = getMaximalBound(GeoPoint(lat, lon), km)
-      Picture.find {
-        val botCond = Pictures.latit greaterEq bound.b
-        val topCond = Pictures.latit lessEq bound.t
-        // TODO: case over -180 and 180
-        val centerCond =
-          (Pictures.longi greaterEq bound.l) and
-            (Pictures.longi lessEq bound.r)
-        botCond and topCond and centerCond
-      }
-        .limit(10)
-        .map(Picture::toIdPicture)
-    }
-    call.respond(roughs)
+    op
   }
 }
 
+private fun <T> sizeQuery(params: Parameters, query: SizedIterable<T>): SizedIterable<T> {
+  val n = abs(params["limit"]?.toIntOrNull() ?: 10)
+  val skip = abs(params["offset"]?.toIntOrNull() ?: 0)
+  return query.limit(n, skip)
+}
 
-fun SqlExpressionBuilder.isGrantedTo(userId: Int): Op<Boolean> {
-  return (Pictures.isPublic eq true) or (Pictures.owner eq userId)
+fun isGrantedTo(userId: Int): Op<Boolean> {
+  return Op.build { Pictures.isPublic eq true or (Pictures.owner eq userId) }
 }
 
 fun insertPicture(parts: MultiPartData, uid: EntityID<Int>): Picture {

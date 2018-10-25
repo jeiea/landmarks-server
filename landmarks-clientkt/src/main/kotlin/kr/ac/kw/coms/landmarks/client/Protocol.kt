@@ -3,6 +3,7 @@ package kr.ac.kw.coms.landmarks.client
 import com.beust.klaxon.Json
 import com.beust.klaxon.JsonObject
 import com.beust.klaxon.internal.firstNotNullResult
+import java.lang.StringBuilder
 import java.util.*
 
 data class ServerFault(
@@ -117,6 +118,31 @@ data class IdCollectionInfo(
 
   override fun hashCode(): Int {
     return id * 10
+  }
+}
+
+enum class UserFilter {
+  Include { override fun toString() = "uid=$userId" },
+  Exclude { override fun toString() = "not_uid=$userId" };
+
+  var userId: Int = -1
+}
+
+data class NearGeoPoint(var lat: Double, var lon: Double, var km: Double) {
+  override fun toString() = "lat=$lat&lon=$lon&km=$km"
+}
+
+class PictureQuery {
+  var userFilter: UserFilter? = null
+  var geoFilter: NearGeoPoint? = null
+  var offset: Int = 0
+  var limit: Int = 10
+
+  override fun toString(): String {
+    val sb = StringBuilder("offset=$offset&limit=$limit")
+    userFilter?.also { sb.append('&'); sb.append(it.toString()) }
+    geoFilter?.also { sb.append('&'); sb.append(it.toString()) }
+    return sb.toString()
   }
 }
 

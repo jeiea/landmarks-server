@@ -13,10 +13,7 @@ import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.forms.formData
 import io.ktor.client.response.HttpResponse
 import io.ktor.http.*
-import kotlinx.coroutines.experimental.Dispatchers
-import kotlinx.coroutines.experimental.GlobalScope
 import kotlinx.coroutines.experimental.channels.Channel
-import kotlinx.coroutines.experimental.channels.produce
 import kotlinx.coroutines.experimental.channels.sendBlocking
 import kotlinx.coroutines.experimental.delay
 import kotlinx.coroutines.experimental.io.readUTF8LineTo
@@ -180,12 +177,8 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
     }
   }
 
-  suspend fun getPictureInfos(userId: Int): MutableList<IdPictureInfo> {
-    return get("$basePath/picture/user/$userId")
-  }
-
-  suspend fun getMyPictureInfos(): MutableList<IdPictureInfo> {
-    return getPictureInfos(profile!!.id)
+  suspend fun getPictures(cond: PictureQuery?): MutableList<IdPictureInfo> {
+    return get("$basePath/picture?$cond")
   }
 
   suspend fun getRandomPictures(n: Int): List<IdPictureInfo> {
@@ -206,11 +199,6 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
     desiredHeight: Int = 480
   ): InputStream {
     return get("$basePath/picture/thumbnail/$id?width=$desiredWidth&height=$desiredHeight")
-  }
-
-  suspend fun getAroundPictures(lat: Double, lon: Double, km: Double):
-    MutableList<IdPictureInfo> {
-    return get("$basePath/picture/near?lat=$lat&lon=$lon&km=$km")
   }
 
   suspend fun modifyPictureInfo(id: Int, info: IPictureInfo) {

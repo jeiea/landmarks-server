@@ -76,6 +76,7 @@ fun Routing.collection() = route("/collection") {
           }
         }
       }
+      col.refresh(true)
       col.toIdCollection()
     }
     call.respond(collection)
