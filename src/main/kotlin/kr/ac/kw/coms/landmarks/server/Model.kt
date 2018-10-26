@@ -3,6 +3,9 @@ package kr.ac.kw.coms.landmarks.server
 import ch.qos.logback.classic.Level
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.experimental.sync.Mutex
+import kotlinx.coroutines.experimental.sync.withLock
 import kr.ac.kw.coms.landmarks.client.CollectionInfo
 import kr.ac.kw.coms.landmarks.client.IdCollectionInfo
 import kr.ac.kw.coms.landmarks.client.IdPictureInfo
@@ -20,7 +23,7 @@ import org.joda.time.DateTime
 import org.joda.time.Period
 import java.sql.Connection
 
-object Users : IntIdTable() {
+open class UserTable : IntIdTable() {
   val login = varchar("login", 20).uniqueIndex()
   val passhash = binary("passhash", 256).nullable()
   val email = varchar("email", 50).uniqueIndex()
@@ -28,6 +31,8 @@ object Users : IntIdTable() {
   val nation = varchar("nation", 20)
   val verification = varchar("verKey", 20).nullable()
 }
+
+object Users : UserTable()
 
 object Pictures : IntIdTable() {
   val hash = binary("hash", 32)
@@ -79,6 +84,7 @@ class User(id: EntityID<Int>) : IntEntity(id) {
 
 class Picture(id: EntityID<Int>) : IntEntity(id) {
   companion object : IntEntityClass<Picture>(Pictures)
+
   var hash by Pictures.hash
   var file by Pictures.file
   var width by Pictures.width
@@ -139,19 +145,22 @@ class CollectionPic(id: EntityID<Int>) : IntEntity(id) {
   var picture by Picture referencedOn CollectionPics.picture
 }
 
-fun dbInitialize() {
+val landmarksDb by lazy { dbInitialize() }
+
+private fun dbInitialize(): Database {
   val cfg = HikariConfig()
   val pgJdbcUrl = System.getenv("JDBC_DATABASE_URL")
   if (pgJdbcUrl != null) {
     cfg.driverClassName = "org.postgresql.Driver"
     cfg.jdbcUrl = pgJdbcUrl
-  } else {
+  }
+  else {
     cfg.jdbcUrl = "jdbc:sqlite:landmarks.sqlite3"
   }
 
   setLoggingLevel(Level.WARN, "com.zaxxer.hikari")
   val dataSource = HikariDataSource(cfg)
-  Database.connect(dataSource)
+  val db: Database = Database.connect(dataSource)
 
   // If don't do this, exception occurs with SQLite
   if (pgJdbcUrl == null) {
@@ -159,6 +168,7 @@ fun dbInitialize() {
   }
 
   createTables()
+  return db
 }
 
 fun <T> transaction(db: Database? = null, statement: Transaction.() -> T): T {
@@ -175,13 +185,11 @@ fun setLoggingLevel(level: ch.qos.logback.classic.Level, target: String) {
   root.level = level
 }
 
+private val tables = arrayOf(Users, Pictures, Collections, CollectionPics, CollectionLikes)
+
 fun createTables() {
   transaction {
-    create(Users)
-    create(Pictures)
-    create(Collections)
-    create(CollectionPics)
-    create(CollectionLikes)
+    create(*tables)
 
     if (User.find { Users.nick eq "admin" }.count() < 1) {
       User.new {
@@ -197,15 +205,69 @@ fun createTables() {
 
 fun dropTables() {
   transaction {
-    drop(CollectionLikes)
-    drop(CollectionPics)
-    drop(Collections)
-    drop(Pictures)
-    drop(Users)
+    drop(*tables.reversedArray())
   }
 }
 
 fun resetTables() {
   dropTables()
   createTables()
+}
+
+val isSqlite get() = landmarksDb.url.contains("sqlite")
+
+fun pushTables() {
+  transaction {
+    val tables = getTables()
+    val top = findBackupTop(tables)
+    tables.forEach {
+      copyTable(it, "${it}_$top")
+    }
+  }
+}
+
+fun popTables() {
+  transaction {
+    val tables = getTables()
+    val topb = findBackupTop(tables) - 1
+    if (topb == 0) {
+      return@transaction
+    }
+    dropTables()
+    tables.forEach {
+      val backup = "${it}_$topb"
+      copyTable(backup, it)
+      drop(Table(backup))
+    }
+  }
+}
+
+private fun findBackupTop(tables: MutableList<String>): Int {
+  for (i in 1..Int.MAX_VALUE) {
+    if (tables.none { it.endsWith("_$i") }) {
+      return i
+    }
+  }
+  return 0
+}
+
+private fun Transaction.copyTable(src: String, dst: String) {
+  exec("CREATE TABLE '$src' AS SELECT * FROM '$dst'")
+}
+
+private fun Transaction.getTables(): MutableList<String> {
+  val sqliteQuery = "SELECT name FROM sqlite_master WHERE type='table'"
+  val postgreQuery = "SELECT table_name FROM information_schema.tables WHERE table_schema='public';"
+  val query = if (isSqlite) sqliteQuery else postgreQuery
+  return execStringColumn(query)
+}
+
+private fun Transaction.execStringColumn(query: String): MutableList<String> {
+  val fields = mutableListOf<String>()
+  exec(query) { cursor ->
+    while (cursor.next()) {
+      fields.add(cursor.getString(0))
+    }
+  }
+  return fields
 }

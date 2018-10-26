@@ -112,6 +112,7 @@ class RemoteMultiSpek : Spek({
       }
       clients.forEach {
         val pics = it.getPictures(PictureQuery().apply {
+          limit = 99
           userFilter = UserFilter.Exclude.apply { userId = it.profile!!.id }
         })
         pics.size `should be greater than` 21

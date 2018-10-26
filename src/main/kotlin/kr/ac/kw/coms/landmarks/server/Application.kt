@@ -11,10 +11,7 @@ import io.ktor.locations.Locations
 import io.ktor.request.uri
 import io.ktor.response.respond
 import io.ktor.response.respondText
-import io.ktor.routing.Routing
-import io.ktor.routing.get
-import io.ktor.routing.put
-import io.ktor.routing.routing
+import io.ktor.routing.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.SessionStorageMemory
@@ -78,7 +75,7 @@ fun Application.landmarksServer() {
     gson { }
   }
 
-  dbInitialize()
+  landmarksDb
   println("DB initialized. server running...")
 
   val att = AttributeKey<DateTime>("prof")
@@ -101,13 +98,27 @@ fun Application.landmarksServer() {
     get("/") {
       call.respondText("Hello, client!")
     }
-    put("/maintenance/reset") {
-      resetTables()
-      call.respondText("DB reset success")
-    }
 
     authentication()
     picture()
     collection()
+    maintenance()
+  }
+}
+
+fun Route.maintenance() = route("/maintenance") {
+  get("/reset") {
+    resetTables()
+    call.respondText("DB reset success")
+  }
+
+  get("/push") {
+    pushTables()
+    call.respondText("DB push success")
+  }
+
+  get("/pop") {
+    popTables()
+    call.respondText("DB pop success")
   }
 }

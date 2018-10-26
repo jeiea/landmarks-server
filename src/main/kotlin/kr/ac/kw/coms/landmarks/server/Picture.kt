@@ -240,6 +240,7 @@ private fun assemblePicture(record: Picture): suspend (PartData) -> Unit = fld@{
   when (part) {
     is PartData.FormItem -> fillFormField(record, part)
     is PartData.FileItem -> receivePictureFile(record, part)
+    else -> Unit
   }
   record.created = DateTime.now()
 
