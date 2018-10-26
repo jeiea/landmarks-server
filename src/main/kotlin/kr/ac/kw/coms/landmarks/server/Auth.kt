@@ -18,11 +18,9 @@ import io.ktor.sessions.sessions
 import io.ktor.sessions.set
 import kr.ac.kw.coms.landmarks.client.AccountForm
 import kr.ac.kw.coms.landmarks.client.IdAccountForm
-import kr.ac.kw.coms.landmarks.client.ServerOK
 import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.select
-import kr.ac.kw.coms.landmarks.server.transaction
 import java.security.MessageDigest
 import java.util.*
 import kotlin.streams.asSequence
@@ -71,7 +69,7 @@ fun Route.authentication() = route("/auth") {
     val digest = getSHA256(reg.password!!)
 
     try {
-      transaction {
+      val account = transaction {
         User.new {
           email = reg.email!!
           login = reg.login!!
@@ -81,7 +79,9 @@ fun Route.authentication() = route("/auth") {
           nation = "KR"
         }
       }
-    } catch (e: ExposedSQLException) {
+      call.respond(toIdAccount(account))
+    }
+    catch (e: ExposedSQLException) {
       val msg: String = e.message ?: throw e
       if (!msg.contains("constraint failed")) {
         throw e
@@ -94,8 +94,6 @@ fun Route.authentication() = route("/auth") {
       }
       errorPage(guide)
     }
-
-    call.respond(ServerOK("success"))
   }
 
   get("/verification/{verKey}") {
@@ -108,7 +106,8 @@ fun Route.authentication() = route("/auth") {
       val target = Users.select { Users.verification eq verKey }.firstOrNull()
       if (target == null) {
         errorPage("invalid verification key")
-      } else {
+      }
+      else {
         Users.deleteWhere { Users.verification eq verKey }
       }
     }
@@ -130,9 +129,13 @@ fun Route.authentication() = route("/auth") {
       errorPage("password incorrect")
     }
     call.sessions.set(LMSession(user.id.value))
-    val info = AccountForm(user.login, email = user.email, nick = user.nick)
-    call.respond(IdAccountForm(user.id.value, info))
+    call.respond(toIdAccount(user))
   }
+}
+
+private fun toIdAccount(user: User): IdAccountForm {
+  val info = AccountForm(user.login, email = user.email, nick = user.nick)
+  return IdAccountForm(user.id.value, info)
 }
 
 internal fun PipelineContext<Unit, ApplicationCall>.requireLogin() =
