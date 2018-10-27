@@ -18,10 +18,10 @@ import io.ktor.sessions.sessions
 import io.ktor.sessions.set
 import kr.ac.kw.coms.landmarks.client.AccountForm
 import kr.ac.kw.coms.landmarks.client.IdAccountForm
-import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.select
 import java.security.MessageDigest
+import java.sql.SQLException
 import java.util.*
 import kotlin.streams.asSequence
 
@@ -81,9 +81,9 @@ fun Route.authentication() = route("/auth") {
       }
       call.respond(toIdAccount(account))
     }
-    catch (e: ExposedSQLException) {
+    catch (e: SQLException) {
       val msg: String = e.message ?: throw e
-      if (!msg.contains("constraint failed")) {
+      if (!msg.contains("constraint")) {
         throw e
       }
       val guide = when {
