@@ -37,7 +37,7 @@ fun getRandomString(length: Long): String {
 
 fun getSHA256(str: String): ByteArray {
   return MessageDigest.getInstance("SHA-256")
-    .digest(("piezo" + str).toByteArray())!!
+    .digest(("piezo$str").toByteArray())!!
 }
 
 fun Route.authentication() = route("/auth") {
@@ -52,7 +52,7 @@ fun Route.authentication() = route("/auth") {
     val reg: AccountForm = call.receive()
     fun throwIfMissing(name: String, field: String?) {
       if (field.isNullOrBlank()) {
-        errorPage("${name} field not found")
+        errorPage("$name field not found")
       }
     }
 
@@ -87,9 +87,9 @@ fun Route.authentication() = route("/auth") {
         throw e
       }
       val guide = when {
-        msg.contains("login") -> "Already exising id"
-        msg.contains("nick") -> "Already exising nick"
-        msg.contains("email") -> "Already exising email"
+        msg.contains("login") -> "Already existing id"
+        msg.contains("nick") -> "Already existing nick"
+        msg.contains("email") -> "Already existing email"
         else -> throw e
       }
       errorPage(guide)
