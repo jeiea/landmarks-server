@@ -3,15 +3,12 @@ package kr.ac.kw.coms.landmarks.client
 import com.beust.klaxon.Json
 import com.beust.klaxon.JsonObject
 import com.beust.klaxon.internal.firstNotNullResult
-import java.lang.StringBuilder
 import java.util.*
 
 data class ServerFault(
   val error: String,
   val stacktrace: String? = null
 ) : Exception(error)
-
-data class ServerOK(val msg: String)
 
 interface IntIdentifiable {
   var id: Int
@@ -121,11 +118,14 @@ data class IdCollectionInfo(
   }
 }
 
-enum class UserFilter {
-  Include { override fun toString() = "uid=$userId" },
-  Exclude { override fun toString() = "not_uid=$userId" };
+sealed class UserFilter {
+  data class Include(val uid: Int): UserFilter() {
+    override fun toString() = "uid=$uid"
+  }
 
-  var userId: Int = -1
+  data class Exclude(val uid: Int): UserFilter() {
+    override fun toString() = "not_uid=$uid"
+  }
 }
 
 data class NearGeoPoint(var lat: Double, var lon: Double, var km: Double) {

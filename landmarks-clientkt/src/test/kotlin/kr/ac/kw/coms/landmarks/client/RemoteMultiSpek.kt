@@ -105,7 +105,7 @@ class RemoteMultiSpek : Spek({
     blit("test valid access") {
       clients.forEach {
         val pics = it.getPictures(PictureQuery().apply {
-          userFilter = UserFilter.Include.apply { userId = it.profile!!.id }
+          userFilter = UserFilter.Include(it.profile!!.id)
         })
         pics.size `should be greater than` 7
         userPics.add(pics)
@@ -113,7 +113,7 @@ class RemoteMultiSpek : Spek({
       clients.forEach {
         val pics = it.getPictures(PictureQuery().apply {
           limit = 99
-          userFilter = UserFilter.Exclude.apply { userId = it.profile!!.id }
+          userFilter = UserFilter.Exclude(it.profile!!.id)
         })
         pics.size `should be greater than` 21
       }
