@@ -27,27 +27,32 @@ class DiarySpek : Spek({
       try {
         client.register("diary", "dlfrl", "diary@kaka.om", "뿜")
       }
-      catch(e: Exception) {}
+      catch (e: Exception) {
+      }
       client.login("diary", "dlfrl")
     }
 
     lateinit var pictures: List<IdPictureInfo>
-    blit("get pictures") {
+    xblit("get pictures") {
       pictures = client.getPictures(PictureQuery().apply {
         limit = 99999
         userFilter = UserFilter.Include(client.profile!!.id)
       })
     }
 
-    val archive = File("../../landmarks-data/archive3")
+    val archive = File("../../landmarks-data/archive4")
     blit("uploads pictures") {
-      if (pictures.isNotEmpty()) {
-        return@blit
+      val pics = archive.resolve("pic.tsv").bufferedReader().use {
+        TsvReader(it).readAll().drop(1)
       }
-      val pics = readTsv(archive.resolve("pic.tsv"))
       val tasks = mutableListOf<Deferred<IdPictureInfo>>()
+      val picArchive = archive.resolve("files")
       for (vs: List<String> in pics) {
-        val file: File = archive.resolve(vs[1])
+        val file: File = picArchive.resolve(vs[1])
+        if (!file.exists()) {
+          println("not exist: $file")
+          continue
+        }
         val lat = vs[2].toDouble()
         val lon = vs[3].toDouble()
         val addr = file.nameWithoutExtension.replace('_', ' ').replace("-mod", "")
@@ -58,15 +63,18 @@ class DiarySpek : Spek({
     }
 
     blit("uploads diaries") {
-      val diaries = readTsv(archive.resolve("diary.tsv"))
+      val diaries = archive.resolve("diary.tsv").bufferedReader().use {
+        TsvReader(it).readAll().drop(1)
+      }
       val tasks = mutableListOf<Deferred<IdCollectionInfo>>()
       diaries.map { vs: List<String> ->
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.KOREAN)
-        val date = LocalDate.parse(vs[0], formatter)
-        val title = vs[1]
-        val text = vs[2]
+        val begDate = LocalDate.parse(vs[0], formatter)
+        val endDate = LocalDate.parse(vs[1], formatter)
+        val title = vs[2]
         val isRoute = vs[3] == "O"
         val picIds = vs[4].trim().split(',').map(String::toInt)
+        val text = vs[5]
         val remoteIds = ArrayList(picIds.map { pictures[it - 1].id })
         val col = CollectionInfo(title, text, remoteIds, isRoute = isRoute)
         tasks.add(GlobalScope.async { client.uploadCollection(col) })
@@ -75,7 +83,3 @@ class DiarySpek : Spek({
     }
   }
 })
-
-private fun readTsv(tsv: File): List<List<String>> {
-  return tsv.readText().split('\n').map { it.split('\t') }
-}

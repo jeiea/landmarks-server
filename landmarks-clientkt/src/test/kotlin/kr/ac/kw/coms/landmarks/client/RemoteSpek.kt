@@ -177,7 +177,7 @@ fun newClient(): Remote {
 fun getTestEngine(): HttpClient {
   return HttpClient(OkHttp.create {
     config {
-      if (System.getProperty("useDirect") != null) {
+      if (System.getProperty("useDirect") == null) {
         proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress("localhost", 8888)))
       }
       connectTimeout(1, TimeUnit.MINUTES)

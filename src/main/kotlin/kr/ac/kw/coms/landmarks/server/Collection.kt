@@ -17,7 +17,7 @@ fun Routing.collection() = route("/collection") {
       Collection.find {
         (Collections.isPublic eq true) and (Collections.owner neq uid)
       }
-        .limit(30).map(Collection::toIdCollection)
+        .map(Collection::toIdCollection)
     }
     call.respond(colls)
   }
