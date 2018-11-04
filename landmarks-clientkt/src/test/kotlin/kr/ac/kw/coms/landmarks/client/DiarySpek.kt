@@ -25,7 +25,7 @@ class DiarySpek : Spek({
   describe("Upload diaries to heroku server") {
     blit("register") {
       try {
-        client.register("diary", "dlfrl", "diary@kaka.om", "뿜")
+        client.register("diary", "dlfrl", "diary@grr.la", "메모메모")
       }
       catch (e: Exception) {
       }
@@ -33,7 +33,7 @@ class DiarySpek : Spek({
     }
 
     lateinit var pictures: List<IdPictureInfo>
-    xblit("get pictures") {
+    blit("get pictures") {
       pictures = client.getPictures(PictureQuery().apply {
         limit = 99999
         userFilter = UserFilter.Include(client.profile!!.id)
@@ -43,7 +43,7 @@ class DiarySpek : Spek({
     val archive = File("../../landmarks-data/archive4")
     blit("uploads pictures") {
       val pics = archive.resolve("pic.tsv").bufferedReader().use {
-        TsvReader(it).readAll().drop(1)
+        TsvReader(it).readAll().drop(1).take(27)
       }
       val tasks = mutableListOf<Deferred<IdPictureInfo>>()
       val picArchive = archive.resolve("files")
