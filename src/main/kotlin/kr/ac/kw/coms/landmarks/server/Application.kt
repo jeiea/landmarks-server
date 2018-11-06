@@ -18,7 +18,9 @@ import io.ktor.sessions.SessionStorageMemory
 import io.ktor.sessions.Sessions
 import io.ktor.sessions.cookie
 import io.ktor.util.AttributeKey
+import kr.ac.kw.coms.landmarks.client.ProfileInfo
 import kr.ac.kw.coms.landmarks.client.ServerFault
+import org.jetbrains.exposed.sql.select
 import org.joda.time.DateTime
 import org.joda.time.Period
 import org.joda.time.format.PeriodFormatterBuilder
@@ -100,6 +102,7 @@ fun Application.landmarksServer() {
     }
 
     authentication()
+    profile()
     picture()
     collection()
     maintenance()
@@ -121,4 +124,19 @@ fun Route.maintenance() = route("/maintenance") {
     popTables()
     call.respondText("DB pop success")
   }
+}
+
+fun Route.profile() = get("/profile") {
+  val uid = requireLogin().userId
+  val profile = transaction {
+    val collCount = Collections.select { Collections.owner eq uid }.count()
+    val picCount = Pictures.select { Pictures.owner eq uid }.count()
+    val registered = Users
+      .select { Users.id eq uid }
+      .adjustSlice { slice(Users.registered) }
+      .first()[Users.registered]
+      .toDate()
+    ProfileInfo(collCount, picCount, registered)
+  }
+  call.respond(profile)
 }

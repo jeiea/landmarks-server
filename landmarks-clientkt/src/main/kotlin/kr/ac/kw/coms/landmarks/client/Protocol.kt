@@ -148,6 +148,12 @@ class PictureQuery {
   }
 }
 
+data class ProfileInfo(
+  var collectionCount: Int,
+  var pictureCount: Int,
+  var registered: Date
+)
+
 /**
  * https://wiki.openstreetmap.org/wiki/Nominatim
  */

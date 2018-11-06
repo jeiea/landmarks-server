@@ -200,6 +200,7 @@ fun createTables() {
         email = ""
         nick = "admin"
         nation = "KR"
+        registered = DateTime.now()
       }
     }
   }

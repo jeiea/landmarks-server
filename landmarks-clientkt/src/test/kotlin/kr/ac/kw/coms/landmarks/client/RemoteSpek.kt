@@ -150,6 +150,12 @@ class RemoteSpek : Spek({
     blit("delete my collection") {
       client.deleteCollection(colls[0].id)
     }
+
+    blit("get profile") {
+      client.uploadCollection(CollectionInfo())
+      val profile = client.getProfile()
+      profile.collectionCount `should be equal to` 1
+    }
   }
 })
 
