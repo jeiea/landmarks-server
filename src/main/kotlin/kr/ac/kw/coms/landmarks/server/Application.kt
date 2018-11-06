@@ -7,6 +7,7 @@ import io.ktor.application.log
 import io.ktor.features.*
 import io.ktor.gson.gson
 import io.ktor.http.HttpStatusCode
+import io.ktor.locations.KtorExperimentalLocationsAPI
 import io.ktor.locations.Locations
 import io.ktor.request.uri
 import io.ktor.response.respond
@@ -26,6 +27,7 @@ import org.joda.time.Period
 import org.joda.time.format.PeriodFormatterBuilder
 
 
+@KtorExperimentalLocationsAPI
 fun main(args: Array<String>) {
   val port = System.getenv("PORT")?.toIntOrNull() ?: 8080
   val server = embeddedServer(
@@ -43,8 +45,9 @@ val periodMinFormat = PeriodFormatterBuilder()
   .appendPrefix(".")
   .appendMillis3Digit()
   .appendSuffix("s")
-  .toFormatter()
+  .toFormatter()!!
 
+@KtorExperimentalLocationsAPI
 fun Application.landmarksServer() {
   install(CallLogging)
   install(Compression) {
@@ -90,7 +93,7 @@ fun Application.landmarksServer() {
       it.attributes.put(att, now)
     }
     environment.monitor.subscribe(Routing.RoutingCallFinished) {
-      val beg = it.attributes.get(att)
+      val beg = it.attributes[att]
       val end = DateTime.now()
       val dur = Period(end.millis - beg.millis)
       val period = periodMinFormat.print(dur)

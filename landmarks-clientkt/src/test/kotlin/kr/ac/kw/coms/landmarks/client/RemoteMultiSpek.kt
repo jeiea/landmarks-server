@@ -2,7 +2,6 @@ package kr.ac.kw.coms.landmarks.client
 
 import kotlinx.coroutines.*
 import org.amshove.kluent.`should be equal to`
-import org.amshove.kluent.`should be greater than`
 import org.amshove.kluent.`should be true`
 import org.amshove.kluent.`should throw`
 import org.jetbrains.spek.api.Spek
