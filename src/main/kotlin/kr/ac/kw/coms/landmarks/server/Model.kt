@@ -3,9 +3,9 @@ package kr.ac.kw.coms.landmarks.server
 import ch.qos.logback.classic.Level
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import kotlinx.coroutines.experimental.runBlocking
-import kotlinx.coroutines.experimental.sync.Mutex
-import kotlinx.coroutines.experimental.sync.withLock
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kr.ac.kw.coms.landmarks.client.CollectionInfo
 import kr.ac.kw.coms.landmarks.client.IdCollectionInfo
 import kr.ac.kw.coms.landmarks.client.IdPictureInfo

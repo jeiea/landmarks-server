@@ -14,7 +14,7 @@ import io.ktor.request.receiveMultipart
 import io.ktor.response.respond
 import io.ktor.response.respondBytes
 import io.ktor.routing.*
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.runBlocking
 import kr.ac.kw.coms.landmarks.client.IdPictureInfo
 import kr.ac.kw.coms.landmarks.client.PictureInfo
 import kr.ac.kw.coms.landmarks.client.copyToSuspend

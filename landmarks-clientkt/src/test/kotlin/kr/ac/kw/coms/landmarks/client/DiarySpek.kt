@@ -1,9 +1,9 @@
 package kr.ac.kw.coms.landmarks.client
 
-import kotlinx.coroutines.experimental.Deferred
-import kotlinx.coroutines.experimental.GlobalScope
-import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.awaitAll
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import org.jetbrains.spek.api.Spek
 import org.jetbrains.spek.api.dsl.describe
 import org.junit.platform.runner.JUnitPlatform

@@ -2,7 +2,11 @@ package kr.ac.kw.coms.landmarks.client
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
-import kotlinx.coroutines.experimental.runBlocking
+import io.ktor.client.engine.apache.Apache
+import io.ktor.client.engine.config
+import io.ktor.client.features.cookies.AcceptAllCookiesStorage
+import io.ktor.client.features.cookies.HttpCookies
+import kotlinx.coroutines.runBlocking
 import org.amshove.kluent.*
 import org.jetbrains.spek.api.Spek
 import org.jetbrains.spek.api.dsl.*

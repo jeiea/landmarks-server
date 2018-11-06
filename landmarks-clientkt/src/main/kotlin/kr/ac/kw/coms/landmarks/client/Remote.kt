@@ -10,16 +10,16 @@ import io.ktor.client.features.cookies.HttpCookies
 import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.append
 import io.ktor.client.request.forms.formData
 import io.ktor.client.response.HttpResponse
 import io.ktor.http.*
-import kotlinx.coroutines.experimental.channels.Channel
-import kotlinx.coroutines.experimental.channels.sendBlocking
-import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.io.readUTF8LineTo
-import kotlinx.io.core.writeFully
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.sendBlocking
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.io.readUTF8LineTo
+import kotlinx.io.InputStream
 import java.io.File
-import java.io.InputStream
 import java.net.URLEncoder
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -61,6 +61,7 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
       }
       install(JsonFeature) {
       }
+      expectSuccess = false
     }
   }
 
@@ -176,7 +177,8 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
       meta.lon?.also { append("lon", it.toString()) }
       meta.address?.also { append("address", it) }
       append("pic0", filename) {
-        writeFully(file.readBytes())
+        val bytes = file.readBytes()
+        writeFully(bytes, 0, bytes.size)
       }
     })
     return post("$basePath/picture") {

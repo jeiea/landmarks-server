@@ -12,13 +12,13 @@ import io.ktor.client.features.cookies.AcceptAllCookiesStorage
 import io.ktor.client.features.cookies.HttpCookies
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.forms.append
 import io.ktor.client.request.forms.formData
 import io.ktor.http.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.util.url
-import kotlinx.coroutines.experimental.runBlocking
-import kotlinx.io.core.writeFully
+import kotlinx.coroutines.runBlocking
 import org.amshove.kluent.`should be`
 import org.amshove.kluent.`should contain`
 import org.apache.http.HttpHost
@@ -98,14 +98,14 @@ class LandmarksSpek : Spek({
         "nick" to ident
       )
     }
-    val registrationReq = fun HttpRequestBuilder.() {
+    suspend fun HttpRequestBuilder.registrationReq () {
       method = HttpMethod.Post
       url.takeFrom("$basePath/auth/register")
       json(regFields)
     }
 
     blit("should reject invalid user-agent") {
-      val call: HttpClientCall = http.call(block = registrationReq)
+      val call: HttpClientCall = http.call { registrationReq() }
       call.response.status `should be` HttpStatusCode.BadRequest
     }
 
@@ -135,7 +135,8 @@ class LandmarksSpek : Spek({
           append("lon", "3.0")
           append("address", "somewhere on earth")
           append("pic0", "coord0.jpg") {
-            writeFully(File("coord0.jpg").inputStream().readBytes())
+            val bytes = File("coord0.jpg").readBytes()
+            writeFully(bytes, 0, bytes.size)
           }
         })
       }
