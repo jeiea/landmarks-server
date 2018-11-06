@@ -30,6 +30,7 @@ open class UserTable : IntIdTable() {
   val nick = varchar("nick", 20).uniqueIndex()
   val nation = varchar("nation", 20)
   val verification = varchar("verKey", 20).nullable()
+  val registered = datetime("registered")
 }
 
 object Users : UserTable()
@@ -80,6 +81,7 @@ class User(id: EntityID<Int>) : IntEntity(id) {
   var nick by Users.nick
   var nation by Users.nation
   var verification by Users.verification
+  var registered by Users.registered
 }
 
 class Picture(id: EntityID<Int>) : IntEntity(id) {

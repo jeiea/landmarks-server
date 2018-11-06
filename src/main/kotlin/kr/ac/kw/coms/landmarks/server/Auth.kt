@@ -20,6 +20,7 @@ import kr.ac.kw.coms.landmarks.client.AccountForm
 import kr.ac.kw.coms.landmarks.client.IdAccountForm
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.select
+import org.joda.time.DateTime
 import java.security.MessageDigest
 import java.sql.SQLException
 import java.util.*
@@ -77,6 +78,7 @@ fun Route.authentication() = route("/auth") {
           passhash = digest
           verification = getRandomString(10)
           nation = "KR"
+          registered = DateTime.now()
         }
       }
       call.respond(toIdAccount(account))
