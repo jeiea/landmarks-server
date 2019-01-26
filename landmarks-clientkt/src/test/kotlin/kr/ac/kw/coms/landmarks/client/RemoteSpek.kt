@@ -2,10 +2,6 @@ package kr.ac.kw.coms.landmarks.client
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.engine.apache.Apache
-import io.ktor.client.engine.config
-import io.ktor.client.features.cookies.AcceptAllCookiesStorage
-import io.ktor.client.features.cookies.HttpCookies
 import kotlinx.coroutines.runBlocking
 import org.amshove.kluent.*
 import org.jetbrains.spek.api.Spek
@@ -13,8 +9,7 @@ import org.jetbrains.spek.api.dsl.*
 import org.junit.platform.runner.JUnitPlatform
 import org.junit.runner.RunWith
 import java.io.File
-import java.net.InetSocketAddress
-import java.net.Proxy
+import java.net.*
 import java.util.*
 import java.util.concurrent.TimeUnit
 

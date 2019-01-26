@@ -1,9 +1,6 @@
 package kr.ac.kw.coms.landmarks.client
 
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.*
 import org.jetbrains.spek.api.Spek
 import org.jetbrains.spek.api.dsl.describe
 import org.junit.platform.runner.JUnitPlatform
@@ -33,11 +30,18 @@ class DiarySpek : Spek({
     }
 
     lateinit var pictures: List<IdPictureInfo>
-    blit("get pictures") {
+    blit("reset pictures, diaries") {
       pictures = client.getPictures(PictureQuery().apply {
         limit = 99999
         userFilter = UserFilter.Include(client.profile!!.id)
       })
+      pictures.forEach {
+        client.deletePicture(it.id)
+      }
+      val ds = client.getCollections(client.profile!!.id)
+      ds.forEach {
+        client.deleteCollection(it.id)
+      }
     }
 
     val archive = File("../../landmarks-data/archive4")
@@ -48,6 +52,10 @@ class DiarySpek : Spek({
       val tasks = mutableListOf<Deferred<IdPictureInfo>>()
       val picArchive = archive.resolve("files")
       for (vs: List<String> in pics) {
+        if (9 <= tasks.size && tasks.size <= 15) {
+          tasks.add(CompletableDeferred(IdPictureInfo(0, PictureInfo())))
+          continue
+        }
         val file: File = picArchive.resolve(vs[1])
         if (!file.exists()) {
           println("not exist: $file")

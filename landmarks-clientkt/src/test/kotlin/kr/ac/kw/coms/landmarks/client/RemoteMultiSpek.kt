@@ -21,26 +21,26 @@ class RemoteMultiSpek : Spek({
     AccountForm("user01", "pass", "some@a.com", "헐크"),
     AccountForm("user02", "pass", "some@b.com", "바바리안"),
     AccountForm("user03", "pass", "some@c.com", "김삿갓"),
-    AccountForm("user04", "pass", "some@c.com", "김삿갓")
+    AccountForm("user04", "pass", "some@d.com", "우비")
   )
 
   val invalidUsers = listOf(
     // a field empty
-    AccountForm("", "fight!", "some@d.com", "헐크"),
-    AccountForm("user11", "", "some@d.com", "헐크"),
+    AccountForm("", "fight!", "some@e.com", "헐크"),
+    AccountForm("user11", "", "some@f.com", "헐크"),
     AccountForm("user12", "fight!", "", "헐크"),
-    AccountForm("user13", "fight!", "some@d.com", ""),
+    AccountForm("user13", "fight!", "some@h.com", ""),
 
     // a field null
-    AccountForm(null, "fight!", "some@e.com", "헐크"),
-    AccountForm("user11", null, "some@f.com", "헐크"),
+    AccountForm(null, "fight!", "some@i.com", "헐크"),
+    AccountForm("user11", null, "some@j.com", "헐크"),
     AccountForm("user12", "fight!", null, "헐크"),
-    AccountForm("user13", "fight!", "some@g.com", null),
+    AccountForm("user13", "fight!", "some@k.com", null),
 
     // duplicate fields
-    AccountForm("user01", "fight!", "some@e.com", "ahh"),
+    AccountForm("user01", "fight!", "some@l.com", "ahh"),
     AccountForm("user07", "fight!", "email", "grr"),
-    AccountForm("user08", "fight!", "some@h.com", "nick")
+    AccountForm("user08", "fight!", "some@m.com", "nick")
   )
 
   val clients = mutableListOf<Remote>()

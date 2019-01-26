@@ -1,39 +1,25 @@
 package kr.ac.kw.coms.landmarks.server
 
-import com.beust.klaxon.JsonBase
-import com.beust.klaxon.json
+import com.beust.klaxon.*
 import io.ktor.application.Application
 import io.ktor.client.HttpClient
-import io.ktor.client.call.HttpClientCall
-import io.ktor.client.call.call
-import io.ktor.client.engine.apache.Apache
-import io.ktor.client.engine.config
-import io.ktor.client.features.cookies.AcceptAllCookiesStorage
-import io.ktor.client.features.cookies.HttpCookies
+import io.ktor.client.call.*
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.features.cookies.*
 import io.ktor.client.request.*
-import io.ktor.client.request.forms.MultiPartFormDataContent
-import io.ktor.client.request.forms.append
-import io.ktor.client.request.forms.formData
+import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.util.url
 import kotlinx.coroutines.runBlocking
-import org.amshove.kluent.`should be`
-import org.amshove.kluent.`should contain`
-import org.apache.http.HttpHost
+import org.amshove.kluent.*
 import org.jetbrains.spek.api.Spek
-import org.jetbrains.spek.api.dsl.TestBody
-import org.jetbrains.spek.api.dsl.TestContainer
-import org.jetbrains.spek.api.dsl.describe
-import org.jetbrains.spek.api.dsl.it
+import org.jetbrains.spek.api.dsl.*
 import org.junit.platform.runner.JUnitPlatform
 import org.junit.runner.RunWith
 import java.io.File
-import java.net.InetSocketAddress
-import java.net.Proxy
-import java.net.ProxySelector
-import java.net.URI
+import java.net.*
 import java.util.concurrent.TimeUnit
 
 fun TestContainer.blit(description: String, body: suspend TestBody.() -> Unit) {
@@ -45,25 +31,24 @@ fun TestContainer.blit(description: String, body: suspend TestBody.() -> Unit) {
 @RunWith(JUnitPlatform::class)
 class LandmarksSpek : Spek({
 
-  val server =
-    embeddedServer(Netty, 8080, module = Application::landmarksServer)
+  val server = embeddedServer(Netty, 8080, module = Application::landmarksServer)
 
   describe("landmarks server") {
     val basePath = "http://localhost:8080"
-    val proxy: InetSocketAddress? = getSystemProxy()
-    val http = HttpClient(Apache.config {
+    val sysProxy: InetSocketAddress? = getSystemProxy()
+    val http = HttpClient(OkHttp.create {
       url {
         host = "localhost"
         port = 8080
       }
-      proxy?.also {
-        customizeClient {
-          setProxy(HttpHost(it.hostName, it.port))
+      config {
+        readTimeout(0, TimeUnit.SECONDS)
+        writeTimeout(0, TimeUnit.SECONDS)
+        connectTimeout(0, TimeUnit.SECONDS)
+        sysProxy?.also {
+          proxy(Proxy(Proxy.Type.HTTP, it))
         }
       }
-      socketTimeout = 0
-      connectTimeout = 0
-      connectionRequestTimeout = 0
     }) {
       install(HttpCookies) {
         storage = AcceptAllCookiesStorage()
