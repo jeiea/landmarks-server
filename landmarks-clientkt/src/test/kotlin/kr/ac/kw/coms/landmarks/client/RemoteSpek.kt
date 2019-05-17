@@ -1,17 +1,17 @@
 package kr.ac.kw.coms.landmarks.client
 
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
-import kotlinx.coroutines.runBlocking
+import io.ktor.client.*
+import io.ktor.client.engine.okhttp.*
+import kotlinx.coroutines.*
 import org.amshove.kluent.*
-import org.jetbrains.spek.api.Spek
+import org.jetbrains.spek.api.*
 import org.jetbrains.spek.api.dsl.*
-import org.junit.platform.runner.JUnitPlatform
-import org.junit.runner.RunWith
-import java.io.File
+import org.junit.platform.runner.*
+import org.junit.runner.*
+import java.io.*
 import java.net.*
 import java.util.*
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 
 @RunWith(JUnitPlatform::class)
 class RemoteSpek : Spek({

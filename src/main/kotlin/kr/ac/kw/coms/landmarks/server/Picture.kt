@@ -1,37 +1,25 @@
 package kr.ac.kw.coms.landmarks.server
 
-import com.drew.imaging.ImageMetadataReader
-import com.drew.metadata.exif.GpsDirectory
-import io.ktor.application.call
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.Parameters
-import io.ktor.http.content.MultiPartData
-import io.ktor.http.content.PartData
-import io.ktor.http.content.forEachPart
-import io.ktor.http.content.streamProvider
-import io.ktor.request.receive
-import io.ktor.request.receiveMultipart
-import io.ktor.response.respond
-import io.ktor.response.respondBytes
+import com.drew.imaging.*
+import com.drew.metadata.exif.*
+import io.ktor.application.*
+import io.ktor.http.*
+import io.ktor.http.content.*
+import io.ktor.request.*
+import io.ktor.response.*
 import io.ktor.routing.*
-import kotlinx.coroutines.runBlocking
-import kr.ac.kw.coms.landmarks.client.IdPictureInfo
-import kr.ac.kw.coms.landmarks.client.PictureInfo
-import kr.ac.kw.coms.landmarks.client.copyToSuspend
-import kr.ac.kw.coms.landmarks.client.getThumbnailLevel
-import net.coobird.thumbnailator.Thumbnails
-import org.jetbrains.exposed.dao.EntityID
+import kotlinx.coroutines.*
+import kr.ac.kw.coms.landmarks.client.*
+import net.coobird.thumbnailator.*
+import org.jetbrains.exposed.dao.*
 import org.jetbrains.exposed.sql.*
-import org.joda.time.DateTime
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.security.MessageDigest
-import java.sql.Blob
-import javax.imageio.ImageIO
-import javax.sql.rowset.serial.SerialBlob
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
+import org.joda.time.*
+import java.io.*
+import java.security.*
+import java.sql.*
+import javax.imageio.*
+import javax.sql.rowset.serial.*
+import kotlin.math.*
 
 
 data class GeoPoint(

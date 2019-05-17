@@ -1,30 +1,21 @@
 package kr.ac.kw.coms.landmarks.server
 
-import io.ktor.application.Application
-import io.ktor.application.call
-import io.ktor.application.install
-import io.ktor.application.log
+import io.ktor.application.*
 import io.ktor.features.*
-import io.ktor.gson.gson
-import io.ktor.http.HttpStatusCode
-import io.ktor.locations.KtorExperimentalLocationsAPI
-import io.ktor.locations.Locations
-import io.ktor.request.uri
-import io.ktor.response.respond
-import io.ktor.response.respondText
+import io.ktor.gson.*
+import io.ktor.http.*
+import io.ktor.locations.*
+import io.ktor.request.*
+import io.ktor.response.*
 import io.ktor.routing.*
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.Netty
-import io.ktor.sessions.SessionStorageMemory
-import io.ktor.sessions.Sessions
-import io.ktor.sessions.cookie
-import io.ktor.util.AttributeKey
-import kr.ac.kw.coms.landmarks.client.ProfileInfo
-import kr.ac.kw.coms.landmarks.client.ServerFault
-import org.jetbrains.exposed.sql.select
-import org.joda.time.DateTime
-import org.joda.time.Period
-import org.joda.time.format.PeriodFormatterBuilder
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.sessions.*
+import io.ktor.util.*
+import kr.ac.kw.coms.landmarks.client.*
+import org.jetbrains.exposed.sql.*
+import org.joda.time.*
+import org.joda.time.format.*
 
 
 @KtorExperimentalLocationsAPI

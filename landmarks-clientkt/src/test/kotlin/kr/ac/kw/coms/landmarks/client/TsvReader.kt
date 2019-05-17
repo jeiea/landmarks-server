@@ -1,6 +1,6 @@
 package kr.ac.kw.coms.landmarks.client
 
-import java.io.Reader
+import java.io.*
 
 /**
  * Portable tsv reader supporting multiline

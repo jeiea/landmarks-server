@@ -1,20 +1,19 @@
 buildscript {
-    ext.kotlin_version = '1.3.20'
-    ext.ktor_version = '1.1.2'
+    ext.kotlin_version = '1.3.31'
+    ext.ktor_version = '1.2.0'
     repositories {
         jcenter()
         maven { url 'https://dl.bintray.com/kotlin/kotlin-dev/' }
     }
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.github.jengelman.gradle.plugins:shadow:4.0.3'
-    }
 }
 
-apply plugin: 'idea'
-apply plugin: 'kotlin'
-apply plugin: 'application'
-apply plugin: 'com.github.johnrengelman.shadow'
+plugins {
+    id 'idea'
+    id 'application'
+    id 'org.jetbrains.kotlin.jvm' version '1.3.31'
+    id 'com.github.ben-manes.versions' version '0.21.0'
+    id 'com.github.johnrengelman.shadow' version '5.0.0'
+}
 
 mainClassName = 'kr.ac.kw.coms.landmarks.server.ApplicationKt'
 
@@ -51,18 +50,18 @@ dependencies {
     implementation "io.ktor:ktor-html-builder:$ktor_version"
     implementation "io.ktor:ktor-locations:$ktor_version"
     // Logging
-    implementation 'ch.qos.logback:logback-classic:1.2.3'
+    implementation 'ch.qos.logback:logback-classic:1.3.0-alpha4'
     // JSON
-    implementation 'com.beust:klaxon:3.0.1'
+    implementation 'com.beust:klaxon:5.0.5'
     implementation "io.ktor:ktor-gson:$ktor_version"
 
     // Kotlin ORM
-    implementation 'org.jetbrains.exposed:exposed:0.12.1'
-    implementation 'joda-time:joda-time:2.10.1'
+    implementation 'org.jetbrains.exposed:exposed:0.13.7'
+    implementation 'joda-time:joda-time:2.10.2'
     // Fast connection pool for performance
-    implementation 'com.zaxxer:HikariCP:3.3.0'
+    implementation 'com.zaxxer:HikariCP:3.3.1'
     // SQLite JDBC Driver
-    implementation 'org.xerial:sqlite-jdbc:3.25.2'
+    implementation 'org.xerial:sqlite-jdbc:3.27.2.1'
     // Postgresql JDBC Driver
     implementation 'org.postgresql:postgresql:42.2.5'
 
@@ -72,29 +71,29 @@ dependencies {
     implementation 'com.drewnoakes:metadata-extractor:2.11.0'
 
     // JUnit 5 test framework
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.3.2'
-    testCompileOnly 'org.junit.platform:junit-platform-runner:1.3.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.5.0-M1'
+    testCompileOnly 'org.junit.platform:junit-platform-runner:1.5.0-M1'
 
     // Spek, the kotlin test framework, with kotlin version replacement.
     testCompileOnly "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
-    testCompileOnly('org.jetbrains.spek:spek-api:1.1.5') {
+    testCompileOnly('org.jetbrains.spek:spek-api:1.2.1') {
         exclude group: 'org.jetbrains.kotlin'
     }
-    testRuntimeOnly('org.jetbrains.spek:spek-junit-platform-engine:1.1.5') {
+    testRuntimeOnly('org.jetbrains.spek:spek-junit-platform-engine:1.2.1') {
         exclude group: 'org.junit.platform'
         exclude group: 'org.jetbrains.kotlin'
     }
 
     // Assertion framework
-    testImplementation 'org.amshove.kluent:kluent:1.38'
+    testImplementation 'org.amshove.kluent:kluent:1.49'
     // Ktor test utility
     testImplementation "io.ktor:ktor-server-test-host:$ktor_version"
 
     // Frontend assets
-    implementation 'org.webjars:webjars-locator:0.34'
+    implementation 'org.webjars:webjars-locator:0.36'
     implementation 'org.webjars:jquery:2.2.4'
-    implementation 'org.webjars:jquery-ui:1.11.4'
-    implementation 'org.webjars:bootstrap:3.3.6'
+    implementation 'org.webjars:jquery-ui:1.12.1'
+    implementation 'org.webjars:bootstrap:4.3.1'
 }
 
 task stage(dependsOn: shadowJar)

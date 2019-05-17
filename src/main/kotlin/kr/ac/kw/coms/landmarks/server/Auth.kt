@@ -1,30 +1,20 @@
 package kr.ac.kw.coms.landmarks.server
 
-import io.ktor.application.ApplicationCall
+import io.ktor.application.*
 import io.ktor.application.ApplicationCallPipeline.ApplicationPhase.Call
-import io.ktor.application.call
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import io.ktor.request.header
-import io.ktor.request.receive
-import io.ktor.response.respond
-import io.ktor.routing.Route
-import io.ktor.routing.get
-import io.ktor.routing.post
-import io.ktor.routing.route
-import io.ktor.sessions.get
-import io.ktor.sessions.sessions
-import io.ktor.sessions.set
-import io.ktor.util.pipeline.PipelineContext
-import kr.ac.kw.coms.landmarks.client.AccountForm
-import kr.ac.kw.coms.landmarks.client.IdAccountForm
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.select
-import org.joda.time.DateTime
-import java.security.MessageDigest
-import java.sql.SQLException
-import java.util.*
-import kotlin.streams.asSequence
+import io.ktor.http.*
+import io.ktor.request.*
+import io.ktor.response.*
+import io.ktor.routing.*
+import io.ktor.sessions.*
+import io.ktor.util.pipeline.*
+import kr.ac.kw.coms.landmarks.client.*
+import org.jetbrains.exposed.sql.*
+import org.joda.time.*
+import java.security.*
+import java.sql.*
+import java.util.Random
+import kotlin.streams.*
 
 data class LMSession(val userId: Int)
 
