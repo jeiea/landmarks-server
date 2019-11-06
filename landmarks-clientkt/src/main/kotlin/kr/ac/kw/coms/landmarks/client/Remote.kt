@@ -1,23 +1,27 @@
 package kr.ac.kw.coms.landmarks.client
 
-import com.beust.klaxon.*
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.features.cookies.*
 import io.ktor.client.features.json.*
+import io.ktor.client.features.json.serializer.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.response.*
 import io.ktor.http.*
+import io.ktor.utils.io.*
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
-import kotlinx.coroutines.io.*
+import kotlinx.serialization.*
+import kotlinx.serialization.json.*
 import java.io.*
 import java.net.*
 import java.util.*
 import java.util.concurrent.*
 import kotlin.math.*
+import kotlin.reflect.*
 
 private typealias HRB = HttpRequestBuilder.() -> Unit
 
@@ -54,6 +58,7 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
         storage = AcceptAllCookiesStorage()
       }
       install(JsonFeature) {
+        serializer = KotlinxSerializer(Json.nonstrict)
       }
       expectSuccess = false
     }
@@ -127,7 +132,7 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
       parameter("lon", longitude.toString())
       userAgent(chromeAgent)
     }
-    val obj: JsonObject = Parser().parse(StringBuilder(json)) as JsonObject
+    val obj: JsonElement = Json.nonstrict.parseJson(json)
     return ReverseGeocodeResult(obj)
   }
 
@@ -171,8 +176,7 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
       meta.lon?.also { append("lon", it.toString()) }
       meta.address?.also { append("address", it) }
       append("pic0", filename) {
-        val bytes = file.readBytes()
-        writeFully(bytes, 0, bytes.size)
+        writeFully(file.readBytes())
       }
     })
     return post("$basePath/picture") {
@@ -180,12 +184,24 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
     }
   }
 
+  //  suspend fun getListOf(url: String)String:
   suspend fun getPictures(cond: PictureQuery?): MutableList<IdPictureInfo> {
-    return get("$basePath/picture?$cond")
+    return getListOf(IdPictureInfo::class, "$basePath/picture?$cond")
+  }
+
+  @UseExperimental(ImplicitReflectionSerializer::class)
+  @Suppress("EXPERIMENTAL_IS_NOT_ENABLED")
+  private suspend fun <T : Any> getListOf(
+    type: KClass<T>,
+    url: String
+  ): MutableList<T> {
+    val json: String = get(url)
+    return Json.nonstrict.parse(type.serializer().list, json).toMutableList()
   }
 
   suspend fun getRandomPictures(n: Int): List<IdPictureInfo> {
-    return get("$basePath/picture/random?n=$n")
+    val json: String = get("$basePath/picture/random?n=$n")
+    return Json.nonstrict.parse(IdPictureInfo.serializer().list, json)
   }
 
   suspend fun getPictureInfo(id: Int): PictureInfo {
@@ -221,11 +237,11 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
   }
 
   suspend fun getRandomCollections(): MutableList<IdCollectionInfo> {
-    return get("$basePath/collection")
+    return getListOf(IdCollectionInfo::class, "$basePath/collection")
   }
 
   suspend fun getCollections(ownerId: Int): MutableList<IdCollectionInfo> {
-    return get("$basePath/collection/user/$ownerId")
+    return getListOf(IdCollectionInfo::class, "$basePath/collection/user/$ownerId")
   }
 
   suspend fun getMyCollections(): MutableList<IdCollectionInfo> {
@@ -233,7 +249,7 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
   }
 
   suspend fun getCollectionsContainPicture(picId: Int): MutableList<IdCollectionInfo> {
-    return get("$basePath/collection/contains/picture/$picId")
+    return getListOf(IdCollectionInfo::class, "$basePath/collection/contains/picture/$picId")
   }
 
   suspend fun modifyCollection(id: Int, collection: CollectionInfo): IdCollectionInfo {

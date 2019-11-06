@@ -2,12 +2,12 @@ package kr.ac.kw.coms.landmarks.server
 
 import io.ktor.application.*
 import io.ktor.features.*
-import io.ktor.gson.*
 import io.ktor.http.*
 import io.ktor.locations.*
 import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.*
+import io.ktor.serialization.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.sessions.*
@@ -57,7 +57,7 @@ fun Application.landmarksServer() {
     exception<Throwable> { cause ->
       val trace: String = stacktraceToString(cause)
       log.error(trace)
-      val json = ServerFault(cause.message ?: "", trace)
+      val json = ServerFault(cause.message ?: "")
       call.respond(HttpStatusCode.InternalServerError, json)
     }
   }
@@ -68,7 +68,7 @@ fun Application.landmarksServer() {
     }
   }
   install(ContentNegotiation) {
-    gson { }
+    serialization()
   }
 
   landmarksDb

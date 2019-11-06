@@ -22,7 +22,7 @@ class RemoteSpek : Spek({
     xblit("does reverse geocoding") {
       val res: ReverseGeocodeResult = client.reverseGeocode(37.54567, 126.9944)
       res.country!! `should be equal to` "대한민국"
-      res.detail!! `should be equal to` "서울특별시"
+      res.detail!! `should be equal to` "서울"
     }
 
     blit("checks server health") {
