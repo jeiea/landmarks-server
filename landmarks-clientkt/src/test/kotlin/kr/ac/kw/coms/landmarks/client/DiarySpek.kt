@@ -1,14 +1,14 @@
 package kr.ac.kw.coms.landmarks.client
 
 import kotlinx.coroutines.*
-import org.jetbrains.spek.api.*
-import org.jetbrains.spek.api.dsl.*
 import org.junit.platform.runner.*
 import org.junit.runner.*
+import org.spekframework.spek2.*
+import org.spekframework.spek2.style.specification.*
 import java.io.*
 import java.time.*
 import java.time.format.*
-import java.util.Locale
+import java.util.*
 import kotlin.collections.ArrayList
 
 

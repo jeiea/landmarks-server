@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 val kotlinVersion = rootProject.extra.properties["kotlinVersion"] ?: "1.3.60-eap-25"
 val ktorVersion = rootProject.extra.properties["ktorVersion"] ?: "1.3.0-beta-1"
+val spekVersion = "2.0.8"
 
 buildscript {
   repositories {
@@ -15,7 +16,7 @@ plugins {
   id("org.jetbrains.kotlin.jvm")
   id("com.github.ben-manes.versions")
   id("com.github.johnrengelman.shadow")
-  id("org.jetbrains.kotlin.plugin.serialization") version "1.3.50"
+  id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 repositories {
@@ -39,23 +40,16 @@ dependencies {
 
   // JUnit 5 test framework
   testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.5.2")
-  testCompileOnly("org.junit.platform:junit-platform-runner:1.5.2")
+  testImplementation("org.junit.platform:junit-platform-runner:1.5.2")
 
-  // Spek, the kotlin test framework, with kotlin version replacement.
-  testCompileOnly("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-  testCompileOnly("org.jetbrains.spek:spek-api:1.2.1") {
-    exclude(group = "org.jetbrains.kotlin")
-  }
-  testRuntimeOnly("org.jetbrains.spek:spek-junit-platform-engine:1.2.1") {
-    exclude(group = "org.junit.platform")
-    exclude(group = "org.jetbrains.kotlin")
-  }
+  // Spek, the kotlin test framework
+  testImplementation("org.spekframework.spek2:spek-dsl-jvm:$spekVersion")
+  testRuntimeOnly("org.spekframework.spek2:spek-runner-junit5:$spekVersion")
+  // spek requires kotlin-reflect, can be omitted if already in the classpath
+  testRuntimeOnly("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
 
   // Assertion framework
   testImplementation("org.amshove.kluent:kluent:1.56")
-
-  // Proxy test
-  testImplementation("io.ktor:ktor-client-apache:$ktorVersion")
 }
 
 tasks.test {

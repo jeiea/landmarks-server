@@ -1,6 +1,5 @@
 package kr.ac.kw.coms.landmarks.server
 
-import com.beust.klaxon.*
 import io.ktor.application.*
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -12,17 +11,20 @@ import io.ktor.http.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.util.*
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
+import kotlinx.serialization.json.*
 import org.amshove.kluent.*
-import org.jetbrains.spek.api.*
-import org.jetbrains.spek.api.dsl.*
 import org.junit.platform.runner.*
 import org.junit.runner.*
+import org.spekframework.spek2.*
+import org.spekframework.spek2.dsl.*
+import org.spekframework.spek2.style.specification.*
 import java.io.*
 import java.net.*
 import java.util.concurrent.*
 
-fun TestContainer.blit(description: String, body: suspend TestBody.() -> Unit) {
+fun Suite.blit(description: String, body: suspend TestBody.() -> Unit) {
   it(description) {
     runBlocking { body() }
   }
@@ -63,9 +65,9 @@ class LandmarksSpek : Spek({
       header("User-Agent", "landmarks-client")
     }
 
-    fun HttpRequestBuilder.json(json: JsonBase) {
+    fun HttpRequestBuilder.json(obj: JsonObject) {
       contentType(ContentType.Application.Json)
-      body = json.toJsonString()
+      body = obj.toString()
     }
 
     blit("should pass health test") {
@@ -76,14 +78,13 @@ class LandmarksSpek : Spek({
     val ident = getRandomString(10)
     val email = "$ident@grr.la"
     val regFields = json {
-      obj(
-        "login" to ident,
-        "password" to "pass",
-        "email" to email,
-        "nick" to ident
-      )
+      "login" to ident
+      "password" to "pass"
+      "email" to email
+      "nick" to ident
     }
-    suspend fun HttpRequestBuilder.registrationReq () {
+
+    suspend fun HttpRequestBuilder.registrationReq() {
       method = HttpMethod.Post
       url.takeFrom("$basePath/auth/register")
       json(regFields)
@@ -103,7 +104,10 @@ class LandmarksSpek : Spek({
     }
 
     blit("can login") {
-      val param = json { obj("login" to ident, "password" to "pass") }
+      val param = json {
+        "login" to ident
+        "password" to "pass"
+      }
       val result: String = http.post("$basePath/auth/login") {
         userAgent()
         json(param)
@@ -143,6 +147,6 @@ private fun getSystemProxy(): InetSocketAddress? {
     println("proxy: $proxy")
     return proxy.address() as InetSocketAddress
   }
-  System.setProperty(vmoUseProxy, null);
+  System.clearProperty(vmoUseProxy)
   return null
 }

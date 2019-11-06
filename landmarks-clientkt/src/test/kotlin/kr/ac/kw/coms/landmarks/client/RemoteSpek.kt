@@ -4,10 +4,11 @@ import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import kotlinx.coroutines.*
 import org.amshove.kluent.*
-import org.jetbrains.spek.api.*
-import org.jetbrains.spek.api.dsl.*
 import org.junit.platform.runner.*
 import org.junit.runner.*
+import org.spekframework.spek2.*
+import org.spekframework.spek2.dsl.*
+import org.spekframework.spek2.style.specification.*
 import java.io.*
 import java.net.*
 import java.util.*
@@ -49,7 +50,7 @@ class RemoteSpek : Spek({
 
     val pics = mutableListOf<IdPictureInfo>()
     blit("uploads picture") {
-      val jpgs = File("../../landmarks-data/archive0").listFiles()
+      val jpgs = File("../../landmarks-data/archive0").listFiles()!!
       for ((idx, f) in jpgs.withIndex()) {
         val gps = idx * 3.0
         val info = PictureInfo(lat = gps, lon = gps, address = f.nameWithoutExtension)
@@ -158,13 +159,13 @@ class RemoteSpek : Spek({
   }
 })
 
-fun TestContainer.blit(description: String, body: suspend TestBody.() -> Unit) {
+fun Suite.blit(description: String, body: suspend TestBody.() -> Unit) {
   it(description) {
     runBlocking { body() }
   }
 }
 
-fun TestContainer.xblit(description: String, body: suspend TestBody.() -> Unit) {
+fun Suite.xblit(description: String, body: suspend TestBody.() -> Unit) {
   xit(description) {
     runBlocking { body() }
   }
