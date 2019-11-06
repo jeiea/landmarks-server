@@ -70,12 +70,11 @@ class RemoteMultiSpek : Spek({
 
     blit("detects registration failure") {
       invalidUsers.forEach { rep ->
-        {
+        invoking {
           runBlocking {
-            val x = client.register(rep.login!!, rep.password!!, rep.email!!, rep.nick!!)
-            throw RuntimeException(x.toString())
+            client.register(rep.login!!, rep.password!!, rep.email!!, rep.nick!!)
           }
-        } `should throw` ServerFault::class
+        } `should throw` Exception::class
       }
     }
   }
@@ -83,6 +82,7 @@ class RemoteMultiSpek : Spek({
   val userPics = mutableListOf<MutableList<IdPictureInfo>>()
   val meta = mutableListOf<List<String>>()
   describe("test picture features with multiple users") {
+
     blit("uploads pictures") {
       val archive = File("../../landmarks-data/archive4")
       meta.addAll(archive.resolve("pic.tsv").bufferedReader().use {

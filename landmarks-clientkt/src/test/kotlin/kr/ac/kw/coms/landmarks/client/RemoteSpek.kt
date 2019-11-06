@@ -160,7 +160,7 @@ class RemoteSpek : Spek({
 })
 
 fun Suite.blit(description: String, body: suspend TestBody.() -> Unit) {
-  it(description) {
+  it(description, timeout = 30000) {
     runBlocking { body() }
   }
 }
