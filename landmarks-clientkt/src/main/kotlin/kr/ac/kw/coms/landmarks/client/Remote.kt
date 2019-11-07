@@ -14,23 +14,16 @@ import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
-import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import java.io.*
 import java.net.*
 import java.util.*
 import java.util.concurrent.*
 import kotlin.math.*
-import kotlin.reflect.*
 
 private typealias HRB = HttpRequestBuilder.() -> Unit
 
 class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
-  /*
-  Implementation details: method's signature MutableList should be kept.
-  Gson can't aware List<> in deserialization type detection.
-   */
-
   val http: HttpClient
   var logger: RemoteLoggable? = null
   var profile: IdAccountForm? = null
@@ -184,24 +177,12 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
     }
   }
 
-  //  suspend fun getListOf(url: String)String:
   suspend fun getPictures(cond: PictureQuery?): MutableList<IdPictureInfo> {
-    return getListOf(IdPictureInfo::class, "$basePath/picture?$cond")
-  }
-
-  @UseExperimental(ImplicitReflectionSerializer::class)
-  @Suppress("EXPERIMENTAL_IS_NOT_ENABLED")
-  private suspend fun <T : Any> getListOf(
-    type: KClass<T>,
-    url: String
-  ): MutableList<T> {
-    val json: String = get(url)
-    return Json.nonstrict.parse(type.serializer().list, json).toMutableList()
+    return get("$basePath/picture?$cond")
   }
 
   suspend fun getRandomPictures(n: Int): List<IdPictureInfo> {
-    val json: String = get("$basePath/picture/random?n=$n")
-    return Json.nonstrict.parse(IdPictureInfo.serializer().list, json)
+    return get("$basePath/picture/random?n=$n")
   }
 
   suspend fun getPictureInfo(id: Int): PictureInfo {
@@ -237,11 +218,11 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
   }
 
   suspend fun getRandomCollections(): MutableList<IdCollectionInfo> {
-    return getListOf(IdCollectionInfo::class, "$basePath/collection")
+    return get("$basePath/collection")
   }
 
   suspend fun getCollections(ownerId: Int): MutableList<IdCollectionInfo> {
-    return getListOf(IdCollectionInfo::class, "$basePath/collection/user/$ownerId")
+    return get("$basePath/collection/user/$ownerId")
   }
 
   suspend fun getMyCollections(): MutableList<IdCollectionInfo> {
@@ -249,7 +230,7 @@ class Remote(engine: HttpClient, private val basePath: String = herokuUri) {
   }
 
   suspend fun getCollectionsContainPicture(picId: Int): MutableList<IdCollectionInfo> {
-    return getListOf(IdCollectionInfo::class, "$basePath/collection/contains/picture/$picId")
+    return get("$basePath/collection/contains/picture/$picId")
   }
 
   suspend fun modifyCollection(id: Int, collection: CollectionInfo): IdCollectionInfo {
